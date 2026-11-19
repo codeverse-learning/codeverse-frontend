@@ -1,4 +1,5 @@
 
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -16,10 +17,11 @@ import {
   Target,
   Zap,
   Menu,
+  LogOut,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import api from "../services/api";
 
 const courses = [
   {
@@ -58,10 +60,68 @@ const activities = [
   { day: "Sun", value: 25 },
 ];
 
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}");
+  } catch {
+    return {};
+  }
+}
+
 function Dashboard() {
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const firstName = storedUser.fullName?.split(" ")[0] || "Student";
   const navigate = useNavigate();
+
+  const [user, setUser] = useState(getStoredUser);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState("");
+
+  // Fetch actual logged-in user profile
+  const fetchProfile = async () => {
+    try {
+      setProfileLoading(true);
+      setProfileError("");
+
+      const response = await api.get("/auth/me");
+
+      const userData = response.data;
+
+      setUser(userData);
+
+      // Update locally stored user information
+      localStorage.setItem("user", JSON.stringify(userData));
+    } catch (error) {
+      if (
+        error.response?.status === 401 ||
+        error.response?.status === 403
+      ) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      setProfileError(
+        "Unable to load your profile. Please check your connection and try again."
+      );
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const firstName = user.fullName?.split(" ")[0] || "Student";
+
+  // Logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-[#080812] text-white flex">
@@ -71,6 +131,7 @@ function Dashboard() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center font-bold text-lg">
             C
           </div>
+
           <div>
             <h1 className="text-xl font-bold tracking-wide">CODEVERSE</h1>
             <p className="text-xs text-gray-500">Learning Platform</p>
@@ -129,6 +190,7 @@ function Dashboard() {
         <header className="h-20 border-b border-white/10 flex items-center justify-between px-5 md:px-8">
           <div className="flex items-center gap-3">
             <Menu className="lg:hidden text-gray-400" size={22} />
+
             <div className="hidden sm:block">
               <p className="text-sm text-gray-400">Learning Dashboard</p>
             </div>
@@ -148,27 +210,44 @@ function Dashboard() {
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center font-semibold text-sm">
                 {firstName.charAt(0).toUpperCase()}
               </div>
+
               <div className="hidden sm:block">
-                <p className="text-sm font-medium">{storedUser.fullName || "Student"}</p>
-                <p className="text-xs text-gray-500">Student</p>
+                <p className="text-sm font-medium">
+                  {profileLoading ? "Loading..." : user.fullName || "Student"}
+                </p>
+
+                <p className="text-xs text-gray-500">
+                  {user.role || "Student"}
+                </p>
               </div>
 
               <button
-                onClick={() => {
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("user");
-                    navigate("/login", { replace: true });
-                }}
+                onClick={handleLogout}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition text-sm"
-                >
+              >
                 <LogOut size={17} />
                 <span className="hidden sm:inline">Logout</span>
-                </button>
+              </button>
             </div>
           </div>
         </header>
 
         <div className="p-5 md:p-8 max-w-7xl mx-auto">
+
+          {/* Profile Error */}
+          {profileError && (
+            <div className="mb-6 p-4 rounded-xl border border-red-500/20 bg-red-500/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-red-300">{profileError}</p>
+
+              <button
+                onClick={fetchProfile}
+                className="px-4 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 text-sm transition"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
           {/* Welcome Section */}
           <section className="mb-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -177,16 +256,28 @@ function Dashboard() {
                   <Sparkles size={14} className="inline mr-1" />
                   Welcome back!
                 </p>
+
                 <h1 className="text-2xl md:text-3xl font-bold">
-                  Hello, {firstName} <span>👋</span>
+                  {profileLoading
+                    ? "Loading your profile..."
+                    : `Hello, ${firstName}`}
+                  {!profileLoading && <span> 👋</span>}
                 </h1>
+
                 <p className="text-gray-400 mt-2 text-sm">
                   Ready to continue your coding journey today?
                 </p>
+
+                {!profileLoading && user.email && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    {user.email}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-orange-500/20 bg-orange-500/5 w-fit">
                 <Flame className="text-orange-400" size={21} />
+
                 <div>
                   <p className="text-sm font-semibold">0 Day Streak</p>
                   <p className="text-xs text-gray-500">Keep it going!</p>
@@ -234,6 +325,7 @@ function Dashboard() {
                 <div className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center mb-4`}>
                   <Icon size={20} />
                 </div>
+
                 <p className="text-gray-400 text-xs md:text-sm">{label}</p>
                 <h2 className="text-2xl font-bold mt-1">{value}</h2>
               </div>
@@ -249,6 +341,7 @@ function Dashboard() {
                   Pick up where you left off
                 </p>
               </div>
+
               <span className="text-sm text-purple-400 flex items-center gap-1 cursor-pointer">
                 View all <ChevronRight size={16} />
               </span>
@@ -264,7 +357,10 @@ function Dashboard() {
                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${course.color} flex items-center justify-center text-2xl`}>
                       {course.icon}
                     </div>
-                    <span className="text-xs text-gray-500">{course.progress}%</span>
+
+                    <span className="text-xs text-gray-500">
+                      {course.progress}%
+                    </span>
                   </div>
 
                   <h3 className="font-semibold text-base">{course.title}</h3>
@@ -277,8 +373,12 @@ function Dashboard() {
                         style={{ width: `${course.progress}%` }}
                       />
                     </div>
+
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-xs text-gray-500">{course.lessons}</span>
+                      <span className="text-xs text-gray-500">
+                        {course.lessons}
+                      </span>
+
                       <button className="text-xs text-purple-400 flex items-center gap-1 group-hover:text-purple-300">
                         <Play size={12} />
                         {course.progress === 0 ? "Start" : "Continue"}
@@ -301,6 +401,7 @@ function Dashboard() {
                     Your activity this week
                   </p>
                 </div>
+
                 <span className="text-xs px-3 py-1.5 rounded-lg bg-white/5 text-gray-400">
                   This week
                 </span>
@@ -318,7 +419,10 @@ function Dashboard() {
                         style={{ height: `${activity.value}%` }}
                       />
                     </div>
-                    <span className="text-xs text-gray-500">{activity.day}</span>
+
+                    <span className="text-xs text-gray-500">
+                      {activity.day}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -332,6 +436,7 @@ function Dashboard() {
               <div className="flex justify-center my-6">
                 <div className="w-36 h-36 rounded-full border-[10px] border-white/5 relative flex items-center justify-center">
                   <div className="absolute inset-[-10px] rounded-full border-[10px] border-purple-500 border-r-transparent border-b-transparent rotate-45" />
+
                   <div className="text-center">
                     <p className="text-3xl font-bold">0%</p>
                     <p className="text-xs text-gray-500">Completed</p>
@@ -343,6 +448,7 @@ function Dashboard() {
                 <span className="text-gray-400">Today's progress</span>
                 <span>0 / 30 min</span>
               </div>
+
               <div className="h-2 bg-white/5 rounded-full mt-3 overflow-hidden">
                 <div className="h-full w-0 bg-purple-500 rounded-full" />
               </div>
@@ -357,17 +463,22 @@ function Dashboard() {
                 <Code2 size={19} />
                 <span className="text-xs font-medium">DAILY CHALLENGE</span>
               </div>
+
               <h2 className="text-lg font-bold">Two Sum</h2>
+
               <p className="text-sm text-gray-400 mt-2 leading-relaxed">
                 Find two numbers in an array that add up to a target value.
                 Test your problem-solving skills!
               </p>
+
               <div className="flex items-center gap-3 mt-4">
                 <span className="text-xs px-3 py-1 rounded-full bg-green-500/10 text-green-400">
                   Easy
                 </span>
+
                 <span className="text-xs text-gray-500">+50 XP</span>
               </div>
+
               <button className="mt-5 w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 transition text-sm font-medium flex items-center justify-center gap-2">
                 Start Challenge <ChevronRight size={16} />
               </button>
@@ -379,17 +490,21 @@ function Dashboard() {
                 <BrainCircuit size={19} />
                 <span className="text-xs font-medium">AI LEARNING ASSISTANT</span>
               </div>
+
               <h2 className="text-lg font-bold">Need help with coding?</h2>
+
               <p className="text-sm text-gray-400 mt-2 leading-relaxed">
                 Ask questions, understand errors, get hints and learn programming
                 concepts with your AI coding tutor.
               </p>
+
               <div className="mt-5 p-3 rounded-xl bg-white/5 border border-white/5">
                 <p className="text-xs text-gray-500">Try asking</p>
                 <p className="text-sm text-gray-300 mt-1">
                   "Explain Python loops with a simple example"
                 </p>
               </div>
+
               <button className="mt-4 w-full py-3 rounded-xl border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition text-sm font-medium flex items-center justify-center gap-2">
                 <Sparkles size={16} />
                 Explore AI Tutor
