@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Mail,
@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import api from "../services/api";
 import logo from "../assets/codeverse-logo.png";
 
 function GoogleIcon() {
@@ -33,41 +34,86 @@ function GithubIcon() {
 }
 
 function Login() {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
+
     setError("");
     setMessage("");
 
-    if (!email.trim() || !password.trim()) {
+    if (!email.trim() || !password) {
       setError("Please enter your email and password.");
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError("Please enter a valid email address.");
       return;
     }
 
-    setMessage(
-      "Login UI is ready! Backend authentication will be connected later."
-    );
+    try {
+      setLoading(true);
+
+      const response = await api.post("/auth/login", {
+        email: email.trim(),
+        password,
+      });
+
+      const data = response.data;
+
+      // Save JWT token
+      localStorage.setItem("token", data.token);
+
+      // Save logged-in user details
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          userId: data.userId,
+          fullName: data.fullName,
+          email: data.email,
+          role: data.role,
+        })
+      );
+
+      setMessage("Login successful! Redirecting...");
+
+      navigate("/dashboard", { replace: true });
+
+    } catch (err) {
+      if (err.response?.status === 401 ||
+          err.response?.status === 403) {
+        setError("Invalid email or password.");
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError(
+          "Unable to connect to the server. Please try again."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider) => {
     setError("");
     setMessage(
-      `${provider} authentication will be connected with the CODEVERSE backend soon.`
+      `${provider} authentication will be connected soon.`
     );
   };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#080812] px-4 py-12">
+
       {/* Background */}
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-purple-600/20 blur-[130px]" />
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-blue-600/20 blur-[130px]" />
@@ -79,6 +125,7 @@ function Login() {
         transition={{ duration: 0.6 }}
         className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#11111f]/90 p-7 shadow-2xl shadow-purple-950/20 backdrop-blur-xl sm:p-9"
       >
+
         {/* Logo */}
         <div className="mb-7 flex justify-center">
           <Link to="/">
@@ -108,6 +155,7 @@ function Login() {
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="mt-8 space-y-5">
+
           {/* Email */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
@@ -189,13 +237,17 @@ function Login() {
           {/* Login Button */}
           <button
             type="submit"
-            className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-3.5 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:shadow-purple-500/30"
+            disabled={loading}
+            className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-3.5 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:shadow-purple-500/30 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Login
-            <ArrowRight
-              size={18}
-              className="transition group-hover:translate-x-1"
-            />
+            {loading ? "Logging in..." : "Login"}
+
+            {!loading && (
+              <ArrowRight
+                size={18}
+                className="transition group-hover:translate-x-1"
+              />
+            )}
           </button>
         </form>
 
