@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { GoogleLogin } from "@react-oauth/google";
 import {
   Mail,
   LockKeyhole,
@@ -13,17 +14,6 @@ import {
 
 import api from "../services/api";
 import logo from "../assets/codeverse-logo.png";
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-5 w-5">
-      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3A12 12 0 0 1 24 36a12 12 0 1 1 8.3-20.7l5.7-5.7A20 20 0 1 0 44 24c0-1.2-.1-2.3-.4-3.5Z" />
-      <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8A12 12 0 0 1 32.3 15.3l5.7-5.7A20 20 0 0 0 6.3 14.7Z" />
-      <path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.3l-6.2-5.2A12 12 0 0 1 12.9 29l-6.5 5A20 20 0 0 0 24 44Z" />
-      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3a12 12 0 0 1-3.9 5.5l6.2 5.2A20 20 0 0 0 44 24c0-1.2-.1-2.3-.4-3.5Z" />
-    </svg>
-  );
-}
 
 function GithubIcon() {
   return (
@@ -38,11 +28,28 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
+
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const saveLogin = (data) => {
+    localStorage.setItem("token", data.token);
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        userId: data.userId,
+        fullName: data.fullName,
+        email: data.email,
+        role: data.role,
+      })
+    );
+
+    navigate("/dashboard", { replace: true });
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -68,40 +75,58 @@ function Login() {
         password,
       });
 
-      const data = response.data;
-
-      // Save JWT token
-      localStorage.setItem("token", data.token);
-
-      // Save logged-in user details
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          userId: data.userId,
-          fullName: data.fullName,
-          email: data.email,
-          role: data.role,
-        })
-      );
-
-      setMessage("Login successful! Redirecting...");
-
-      navigate("/dashboard", { replace: true });
-
+      saveLogin(response.data);
     } catch (err) {
-      if (err.response?.status === 401 ||
-          err.response?.status === 403) {
+      if (
+        err.response?.status === 401 ||
+        err.response?.status === 403
+      ) {
         setError("Invalid email or password.");
       } else if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
-        setError(
-          "Unable to connect to the server. Please try again."
-        );
+        setError("Unable to connect to the server. Please try again.");
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  // Google authentication
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    setMessage("");
+
+    const googleIdToken = credentialResponse?.credential;
+
+    if (!googleIdToken) {
+      setError("Unable to get Google authentication token.");
+      return;
+    }
+
+    try {
+      setGoogleLoading(true);
+
+      const response = await api.post("/auth/google", {
+        idToken: googleIdToken,
+      });
+
+      saveLogin(response.data);
+    } catch (err) {
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.response) {
+        setError("Google login failed. Please try again.");
+      } else {
+        setError("Unable to connect to the server. Please try again.");
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("Google authentication failed. Please try again.");
   };
 
   const handleSocialLogin = (provider) => {
@@ -113,7 +138,6 @@ function Login() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#080812] px-4 py-12">
-
       {/* Background */}
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-purple-600/20 blur-[130px]" />
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-blue-600/20 blur-[130px]" />
@@ -125,7 +149,6 @@ function Login() {
         transition={{ duration: 0.6 }}
         className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#11111f]/90 p-7 shadow-2xl shadow-purple-950/20 backdrop-blur-xl sm:p-9"
       >
-
         {/* Logo */}
         <div className="mb-7 flex justify-center">
           <Link to="/">
@@ -155,7 +178,6 @@ function Login() {
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="mt-8 space-y-5">
-
           {/* Email */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
@@ -237,7 +259,7 @@ function Login() {
           {/* Login Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || googleLoading}
             className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-3.5 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:shadow-purple-500/30 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Logging in..." : "Login"}
@@ -260,26 +282,36 @@ function Login() {
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
-        {/* Social Authentication */}
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => handleSocialLogin("Google")}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white px-4 py-3 font-medium text-gray-800 transition hover:bg-gray-100"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSocialLogin("GitHub")}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-[#19192b] px-4 py-3 font-medium text-white transition hover:bg-[#222238]"
-          >
-            <GithubIcon />
-            Continue with GitHub
-          </button>
+        {/* Google Authentication */}
+        <div className="flex w-full justify-center">
+          {googleLoading ? (
+            <div className="w-full rounded-xl border border-white/10 bg-white py-3 text-center text-sm font-medium text-gray-700">
+              Connecting to Google...
+            </div>
+          ) : (
+            <div className="w-full [&>div]:w-full [&>div>div]:w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="filled_white"
+                size="large"
+                shape="rectangular"
+                text="continue_with"
+                width="350"
+              />
+            </div>
+          )}
         </div>
+
+        {/* GitHub Authentication */}
+        <button
+          type="button"
+          onClick={() => handleSocialLogin("GitHub")}
+          className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-[#19192b] px-4 py-3 font-medium text-white transition hover:bg-[#222238]"
+        >
+          <GithubIcon />
+          Continue with GitHub
+        </button>
 
         {/* Register Link */}
         <p className="mt-7 text-center text-sm text-slate-400">
