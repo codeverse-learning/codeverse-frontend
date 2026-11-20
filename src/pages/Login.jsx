@@ -129,15 +129,41 @@ function Login() {
     setError("Google authentication failed. Please try again.");
   };
 
+  // GitHub authentication
   const handleSocialLogin = (provider) => {
     setError("");
-    setMessage(
-      `${provider} authentication will be connected soon.`
-    );
+    setMessage("");
+
+    if (provider === "GitHub") {
+      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+
+      if (!clientId) {
+        setError("GitHub Client ID is not configured.");
+        return;
+      }
+
+      const state = crypto.randomUUID();
+
+      sessionStorage.setItem("github_oauth_state", state);
+
+      const redirectUri = "http://localhost:5173/github/callback";
+
+      const githubUrl = new URL(
+        "https://github.com/login/oauth/authorize"
+      );
+
+      githubUrl.searchParams.set("client_id", clientId);
+      githubUrl.searchParams.set("redirect_uri", redirectUri);
+      githubUrl.searchParams.set("scope", "read:user user:email");
+      githubUrl.searchParams.set("state", state);
+
+      window.location.href = githubUrl.toString();
+    }
   };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#080812] px-4 py-12">
+
       {/* Background */}
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-purple-600/20 blur-[130px]" />
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-blue-600/20 blur-[130px]" />
@@ -149,6 +175,7 @@ function Login() {
         transition={{ duration: 0.6 }}
         className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#11111f]/90 p-7 shadow-2xl shadow-purple-950/20 backdrop-blur-xl sm:p-9"
       >
+
         {/* Logo */}
         <div className="mb-7 flex justify-center">
           <Link to="/">
@@ -178,6 +205,7 @@ function Login() {
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="mt-8 space-y-5">
+
           {/* Email */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
@@ -282,36 +310,42 @@ function Login() {
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
-        {/* Google Authentication */}
-        <div className="flex w-full justify-center">
-          {googleLoading ? (
-            <div className="w-full rounded-xl border border-white/10 bg-white py-3 text-center text-sm font-medium text-gray-700">
-              Connecting to Google...
-            </div>
-          ) : (
-            <div className="w-full [&>div]:w-full [&>div>div]:w-full">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                theme="filled_white"
-                size="large"
-                shape="rectangular"
-                text="continue_with"
-                width="350"
-              />
-            </div>
-          )}
-        </div>
+        {/* Social Login Buttons */}
+        <div className="mx-auto flex w-full max-w-[350px] flex-col gap-3">
 
-        {/* GitHub Authentication */}
-        <button
-          type="button"
-          onClick={() => handleSocialLogin("GitHub")}
-          className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-[#19192b] px-4 py-3 font-medium text-white transition hover:bg-[#222238]"
-        >
-          <GithubIcon />
-          Continue with GitHub
-        </button>
+          {/* Google Authentication */}
+          <div className="flex h-10 w-full items-center justify-center overflow-hidden rounded-md">
+            {googleLoading ? (
+              <div className="flex h-10 w-full items-center justify-center rounded-md bg-white text-sm font-medium text-gray-700">
+                Connecting to Google...
+              </div>
+            ) : (
+              <div className="flex h-10 w-full items-center justify-center [&>div]:!w-full [&_iframe]:!max-w-full">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  theme="filled_white"
+                  size="large"
+                  shape="rectangular"
+                  text="continue_with"
+                  width="350"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* GitHub Authentication */}
+          <button
+            type="button"
+            onClick={() => handleSocialLogin("GitHub")}
+            disabled={googleLoading || loading}
+            className="flex h-10 w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#19192b] px-4 text-sm font-medium text-white transition hover:bg-[#222238] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <GithubIcon />
+            Continue with GitHub
+          </button>
+
+        </div>
 
         {/* Register Link */}
         <p className="mt-7 text-center text-sm text-slate-400">
@@ -324,12 +358,14 @@ function Login() {
           </Link>
         </p>
 
+        {/* Back to Home */}
         <Link
           to="/"
           className="mt-5 block text-center text-xs text-slate-500 transition hover:text-slate-300"
         >
           ← Back to Home
         </Link>
+
       </motion.div>
     </div>
   );

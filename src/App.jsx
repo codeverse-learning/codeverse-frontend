@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import GithubCallback from "./pages/GithubCallback";
 
 function App() {
   return (
@@ -27,6 +28,12 @@ function App() {
         {/* Authentication */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* GitHub OAuth Callback */}
+        <Route
+          path="/github/callback"
+          element={<GithubCallback />}
+        />
 
         {/* Protected Pages */}
         <Route element={<ProtectedRoute />}>
