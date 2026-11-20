@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import GithubCallback from "./pages/GithubCallback";
+import CourseLearning from "./pages/CourseLearning";
 
 function App() {
   return (
@@ -38,6 +39,12 @@ function App() {
         {/* Protected Pages */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+
+          {/* Student Course Learning */}
+          <Route
+            path="/learn/:courseId"
+            element={<CourseLearning />}
+          />
         </Route>
       </Routes>
     </BrowserRouter>
