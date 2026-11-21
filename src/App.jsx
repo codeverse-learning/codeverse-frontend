@@ -10,6 +10,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import GithubCallback from "./pages/GithubCallback";
 import CourseLearning from "./pages/CourseLearning";
+import CodeExplainer from "./pages/CodeExplainer";
 
 function App() {
   return (
@@ -46,6 +47,13 @@ function App() {
             element={<CourseLearning />}
           />
         </Route>
+
+        {/* Code Explainer */}
+        <Route
+          path="/code-explainer"
+          element={<CodeExplainer />}
+        />
+        
       </Routes>
     </BrowserRouter>
   );
