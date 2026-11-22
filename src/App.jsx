@@ -12,6 +12,9 @@ import GithubCallback from "./pages/GithubCallback";
 import CourseLearning from "./pages/CourseLearning";
 import CodeExplainer from "./pages/CodeExplainer";
 
+import AnimationEngine from "./components/visual-learning/AnimationEngine";
+import VisualLearningStudio from "./components/visual-learning/VisualLearningStudio";
+
 function App() {
   return (
     <BrowserRouter>
@@ -39,21 +42,42 @@ function App() {
 
         {/* Protected Pages */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          {/* Dashboard */}
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
 
           {/* Student Course Learning */}
           <Route
             path="/learn/:courseId"
             element={<CourseLearning />}
           />
+
+          {/* AI Visual Learning Studio */}
+          <Route
+            path="/visual-learning"
+            element={<VisualLearningStudio />}
+          />
         </Route>
 
-        {/* Code Explainer */}
+        {/* AI Code Explainer */}
         <Route
           path="/code-explainer"
           element={<CodeExplainer />}
         />
-        
+
+        {/* Animation Test Page */}
+        <Route
+          path="/animation-test"
+          element={
+            <div className="min-h-screen bg-[#080812] p-6">
+              <div className="mx-auto max-w-4xl">
+                <AnimationEngine />
+              </div>
+            </div>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

@@ -7,6 +7,7 @@ import {
   Code2,
   Trophy,
   BrainCircuit,
+  Clapperboard,
   Settings,
   LogOut,
   Sparkles,
@@ -72,6 +73,11 @@ function StudentDashboard({ user }) {
     navigate("/code-explainer");
   };
 
+  const openVisualLearning = () => {
+    setSidebarOpen(false);
+    navigate("/visual-learning");
+  };
+
   const menu = [
     {
       name: "Dashboard",
@@ -86,6 +92,11 @@ function StudentDashboard({ user }) {
       name: "AI Code Explainer",
       icon: BrainCircuit,
       action: openCodeExplainer,
+    },
+    {
+      name: "Visual Learning Studio",
+      icon: Clapperboard,
+      action: openVisualLearning,
     },
     {
       name: "Explore Courses",
@@ -305,8 +316,7 @@ function StudentDashboard({ user }) {
                   </button>
 
                   <p className="text-xs text-gray-500 mt-4">
-                    AI explanations will be enabled after backend
-                    integration.
+                    Explore AI-powered explanations and interactive learning tools.
                   </p>
                 </div>
 
@@ -342,6 +352,54 @@ print(greet("CODEVERSE"))`}</code>
                   </div>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* AI Learning Tools */}
+          <section className="mb-10" id="ai-tools">
+            <div className="mb-6">
+              <div className="mb-2 flex items-center gap-2 text-xs text-purple-400">
+                <Sparkles size={16} />
+                LEARN WITH AI
+              </div>
+              <h2 className="text-xl font-bold">AI Learning Tools</h2>
+              <p className="mt-2 text-sm text-gray-400">
+                Choose how you want to understand your code.
+              </p>
+            </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={openCodeExplainer}
+                className="group rounded-2xl border border-purple-500/20 bg-[#11111f] p-6 text-left transition hover:-translate-y-1 hover:border-purple-400/60"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10">
+                  <BrainCircuit className="text-purple-400" size={25} />
+                </div>
+                <h3 className="text-lg font-semibold">AI Code Explainer</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  Get clear, step-by-step explanations of your code, logic, and syntax.
+                </p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-purple-400">
+                  Explain Code <ArrowRight size={17} className="transition group-hover:translate-x-1" />
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={openVisualLearning}
+                className="group rounded-2xl border border-blue-500/20 bg-[#11111f] p-6 text-left transition hover:-translate-y-1 hover:border-blue-400/60"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
+                  <Clapperboard className="text-blue-400" size={25} />
+                </div>
+                <h3 className="text-lg font-semibold">Visual Learning Studio</h3>
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  Watch animated code lessons with optional English voice narration.
+                </p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-blue-400">
+                  Start Visual Learning <ArrowRight size={17} className="transition group-hover:translate-x-1" />
+                </span>
+              </button>
             </div>
           </section>
 
