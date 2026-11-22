@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import AnimationEngine from "../components/visual-learning/AnimationEngine";
 import {
   ArrowLeft, BrainCircuit, Check, ChevronDown, Clipboard, Code2,
-  FileCode2, Lightbulb, LoaderCircle, RotateCcw, Sparkles,
+  FileCode2, Lightbulb, LoaderCircle, RotateCcw, Sparkles, History,
   WandSparkles, BookOpen, ChevronLeft, ChevronRight, Trophy,
   CircleCheck, CircleX, Play, GraduationCap, Pause, Square, Volume2, VolumeX, Film, ArrowRight,
 } from "lucide-react";
@@ -479,7 +479,7 @@ function CodeExplainer() {
   const buildLocalOutline = () => {
     const lines = code.split(/\r?\n/);
     const chapters = [];
-    const chapterSize = 50;
+    const chapterSize = 12;
     for (let start = 0; start < lines.length; start += chapterSize) {
       const end = Math.min(start + chapterSize, lines.length);
       chapters.push({
@@ -710,14 +710,25 @@ function CodeExplainer() {
 
   return (
     <div className="min-h-screen bg-[#080812] text-white">
-      <header className="border-b border-white/10 bg-[#0c0c18]">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0c0c18] shadow-lg shadow-black/20">
         <div className="max-w-7xl mx-auto px-5 md:px-8 py-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <button onClick={() => navigate("/dashboard")} className="p-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5" title="Back to Dashboard"><ArrowLeft size={19} /></button>
             <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center"><BrainCircuit size={23} /></div>
             <div><h1 className="text-lg md:text-xl font-bold">AI Code Explainer & Tutor</h1><p className="text-xs text-gray-500">CODEVERSE Learning Platform</p></div>
           </div>
-          <span className="hidden sm:inline-flex items-center gap-2 text-xs text-purple-300 bg-purple-500/10 border border-purple-500/20 rounded-full px-4 py-2"><Sparkles size={14} /> AI Powered</span>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/ai/history")}
+              className="inline-flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-200 transition hover:bg-purple-500/20"
+            >
+              <History size={18} />
+              <span className="hidden sm:inline">My Learning History</span>
+              <span className="sm:hidden">History</span>
+            </button>
+            <span className="hidden lg:inline-flex items-center gap-2 text-xs text-purple-300 bg-purple-500/10 border border-purple-500/20 rounded-full px-4 py-2"><Sparkles size={14} /> AI Powered</span>
+          </div>
         </div>
       </header>
 

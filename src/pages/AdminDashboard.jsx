@@ -360,7 +360,7 @@ function AdminDashboard({ user }) {
 
       {/* Main */}
       <main className="flex-1 min-w-0">
-        <header className="min-h-20 border-b border-white/10 flex items-center justify-between px-5 md:px-8 gap-3">
+        <header className="sticky top-0 z-30 min-h-20 border-b border-white/10 bg-[#0c0c18] flex items-center justify-between px-5 md:px-8 gap-3 shadow-lg shadow-black/20">
           <div>
             <h2 className="font-semibold">Admin Dashboard</h2>
             <p className="text-xs text-gray-500">

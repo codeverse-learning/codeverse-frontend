@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import GithubCallback from "./pages/GithubCallback";
 import CourseLearning from "./pages/CourseLearning";
 import CodeExplainer from "./pages/CodeExplainer";
+import AiLearningHistory from "./pages/AiLearningHistory";
 
 import AnimationEngine from "./components/visual-learning/AnimationEngine";
 import VisualLearningStudio from "./components/visual-learning/VisualLearningStudio";
@@ -58,6 +59,12 @@ function App() {
           <Route
             path="/visual-learning"
             element={<VisualLearningStudio />}
+          />
+
+          {/* AI Learning History */}
+          <Route
+            path="/ai/history"
+            element={<AiLearningHistory />}
           />
         </Route>
 

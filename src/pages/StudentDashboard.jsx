@@ -215,7 +215,7 @@ function StudentDashboard({ user }) {
       {/* Main Content */}
       <main className="flex-1 min-w-0">
         {/* Top Header */}
-        <header className="min-h-20 border-b border-white/10 flex items-center justify-between px-5 md:px-8 gap-3">
+        <header className="sticky top-0 z-30 min-h-20 border-b border-white/10 bg-[#0c0c18] flex items-center justify-between px-5 md:px-8 gap-3 shadow-lg shadow-black/20">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
