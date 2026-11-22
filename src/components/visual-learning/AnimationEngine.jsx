@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Pause, RotateCcw, ChevronRight, ChevronLeft, Terminal, Workflow, Volume2, VolumeX } from "lucide-react";
 import VoiceNarrator from "./VoiceNarrator";
 
-const SILENT_SCENE_MS = 3500;
+const SILENT_SCENE_MS = 7000;
 
 export default function AnimationEngine({ scenes = [], onSceneChange, language = "Code" }) {
   const [currentScene, setCurrentScene] = useState(0);
@@ -123,50 +123,59 @@ export default function AnimationEngine({ scenes = [], onSceneChange, language =
         </div>
       </div>
 
-      <div className="space-y-6 p-5 md:p-8">
-        <div className="rounded-xl border border-white/10 bg-[#080812] p-5">
-          <p className="mb-3 text-sm font-medium text-gray-400">{language} Code</p>
-          <pre className="overflow-x-auto whitespace-pre-wrap break-words text-base leading-8 text-blue-300"><code>{scene.code}</code></pre>
-        </div>
-
-        <div className="relative flex min-h-[280px] flex-col items-center justify-center gap-6 overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-[#17112e] to-[#0b1630] p-6">
-          <AnimatePresence mode="wait">
-            <motion.div key={currentScene} initial={{ opacity: 0, scale: 0.75, y: 25 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.85, y: -20 }} transition={{ duration: 0.6 }} className="flex w-full flex-col items-center gap-5">
-              {showVariable && (
-                <div className="relative flex h-36 w-48 flex-col items-center justify-center rounded-2xl border-2 border-purple-400 bg-purple-500/15 shadow-[0_0_40px_rgba(168,85,247,0.18)]">
-                  <span className="absolute -top-4 max-w-[90%] truncate rounded-lg bg-purple-600 px-4 py-1.5 text-sm font-semibold">{scene.variable}</span>
-                  <AnimatePresence mode="wait">
-                    {scene.value ? (
-                      <motion.span key={scene.value} initial={{ opacity: 0, y: -45, scale: 0.5 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: "spring", stiffness: 160, damping: 13 }} className="max-w-full break-all px-3 text-center text-2xl font-bold text-white">{scene.value}</motion.span>
-                    ) : (
-                      <motion.span key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-lg text-gray-500">Empty Box</motion.span>
-                    )}
-                  </AnimatePresence>
+      {/* Synchronized three-panel view: code, animation and explanation. */}
+      <div className="p-3 md:p-5 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-stretch">
+          <section className="min-w-0 h-[300px] lg:h-[390px] flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#080812]" aria-label="Code for current scene">
+            <div className="shrink-0 border-b border-white/10 px-4 py-3 text-sm font-semibold text-blue-300">{language} · Current code</div>
+            <div className="min-h-0 flex-1 overflow-auto p-3 font-mono text-sm leading-7">
+              {(String(scene.code || "").split("\n")).map((line, index) => (
+                <div key={`${currentScene}-${index}`} className="flex min-w-0 gap-3 rounded px-1 hover:bg-white/5">
+                  <span className="w-7 shrink-0 select-none text-right text-gray-600">{index + 1}</span>
+                  <span className="whitespace-pre-wrap break-words text-blue-200 min-w-0">{line || " "}</span>
                 </div>
-              )}
-              {type === "process" && (
-                <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4 text-center">
-                  <Workflow size={60} className="text-purple-300" />
-                  <p className="text-lg font-semibold text-purple-100">Processing this step</p>
-                  <p className="max-w-md break-words font-mono text-sm text-blue-200">{scene.code}</p>
-                </motion.div>
-              )}
-              {(type === "output" || Boolean(scene.output)) && (
-                <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="w-full max-w-md rounded-xl border border-green-500/30 bg-green-500/10 px-6 py-4 text-center">
-                  <p className="mb-2 flex items-center justify-center gap-2 text-sm text-green-400"><Terminal size={16} /> Console Output</p>
-                  <pre className="whitespace-pre-wrap break-words text-xl font-bold text-green-300">{scene.output || "Output depends on runtime input"}</pre>
-                </motion.div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              ))}
+            </div>
+          </section>
 
-        <AnimatePresence mode="wait">
-          <motion.div key={`story-${currentScene}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-5">
-            <p className="mb-2 text-sm font-semibold text-blue-300">Let's Understand!</p>
-            <p className="text-lg leading-8 text-gray-200">{scene.narration}</p>
-          </motion.div>
-        </AnimatePresence>
+          <section className="min-w-0 h-[300px] lg:h-[390px] flex flex-col overflow-hidden rounded-xl border border-purple-500/20 bg-gradient-to-br from-[#17112e] to-[#0b1630]" aria-label="Current scene animation">
+            <div className="shrink-0 border-b border-white/10 px-4 py-3 text-sm font-semibold text-purple-200">Live animation</div>
+            <div className="min-h-0 flex-1 overflow-auto flex items-center justify-center p-4">
+              <AnimatePresence mode="wait">
+                <motion.div key={currentScene} initial={{ opacity: 0, scale: 0.85, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -12 }} transition={{ duration: 0.35 }} className="flex w-full min-w-0 flex-col items-center gap-5">
+                  {showVariable && (
+                    <div className="relative mt-4 flex min-h-28 w-full max-w-48 flex-col items-center justify-center rounded-2xl border-2 border-purple-400 bg-purple-500/15 p-3 shadow-[0_0_40px_rgba(168,85,247,0.18)]">
+                      <span className="absolute -top-4 max-w-[95%] truncate rounded-lg bg-purple-600 px-3 py-1 text-xs font-semibold">{scene.variable}</span>
+                      <motion.span key={String(scene.value ?? "empty")} initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="max-w-full break-all text-center text-xl font-bold">{scene.value == null || scene.value === "" ? "Empty Box" : String(scene.value)}</motion.span>
+                    </div>
+                  )}
+                  {(type === "process" || type === "loop" || type === "condition" || type === "function") && (
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <Workflow size={48} className="text-purple-300" />
+                      <p className="text-base font-semibold text-purple-100">{type === "loop" ? "Loop execution" : type === "condition" ? "Checking condition" : type === "function" ? "Function execution" : "Processing this step"}</p>
+                      <p className="max-w-full break-words font-mono text-xs text-blue-200">{scene.code}</p>
+                    </div>
+                  )}
+                  {(type === "output" || Boolean(scene.output)) && (
+                    <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-center">
+                      <p className="mb-2 flex items-center justify-center gap-2 text-xs text-green-400"><Terminal size={15} /> Console Output</p>
+                      <pre className="whitespace-pre-wrap break-words text-base font-bold text-green-300">{scene.output || "Output depends on runtime input"}</pre>
+                    </motion.div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </section>
+
+          <section className="min-w-0 h-[300px] lg:h-[390px] flex flex-col overflow-hidden rounded-xl border border-blue-500/20 bg-blue-500/5" aria-label="Explanation of current scene">
+            <div className="shrink-0 border-b border-white/10 px-4 py-3 text-sm font-semibold text-blue-300">Explanation · Step {currentScene + 1}</div>
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <AnimatePresence mode="wait">
+                <motion.p key={currentScene} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="whitespace-pre-wrap break-words text-sm leading-7 text-gray-200">{scene.narration || "No explanation was provided for this scene."}</motion.p>
+              </AnimatePresence>
+            </div>
+          </section>
+        </div>
 
         <VoiceNarrator
           text={scene.narration || ""}

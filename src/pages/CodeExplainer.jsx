@@ -400,6 +400,11 @@ function CodeExplainer() {
   const [mode, setMode] = useState("explain");
   const editorRef = useRef(null);
   const [visualLesson, setVisualLesson] = useState(null);
+  const [chapterOutline, setChapterOutline] = useState(null);
+  const [activeChapter, setActiveChapter] = useState(0);
+  const [chapterLessons, setChapterLessons] = useState({});
+  const [completedChapters, setCompletedChapters] = useState([]);
+  const [chapterLoading, setChapterLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [result, setResult] = useState(null);
@@ -415,6 +420,11 @@ function CodeExplainer() {
     setResult(null);
     setLesson(null);
     setVisualLesson(null);
+    setChapterOutline(null);
+    setActiveChapter(0);
+    setChapterLessons({});
+    setCompletedChapters([]);
+    setChapterLoading(false);
     setDemo(false);
     setStepIndex(0);
     setAnswers({});
@@ -462,12 +472,136 @@ function CodeExplainer() {
     return true;
   };
 
+  const requestPayload = () => ({ language, code, explanationLevel });
+
+  // Build a reliable chapter outline from the actual source lines. This does not
+  // depend on Gemini returning a particular outline JSON structure.
+  const buildLocalOutline = () => {
+    const lines = code.split(/\r?\n/);
+    const chapters = [];
+    const chapterSize = 50;
+    for (let start = 0; start < lines.length; start += chapterSize) {
+      const end = Math.min(start + chapterSize, lines.length);
+      chapters.push({
+        index: chapters.length,
+        startLine: start + 1,
+        endLine: end,
+        title: `Lines ${start + 1}–${end}`,
+      });
+    }
+    return { totalLines: lines.length, chapters };
+  };
+
+  const normalizeJson = (input) => {
+    if (typeof input !== "string") return input;
+    try { return JSON.parse(input); } catch { return input; }
+  };
+
+  const normalizeLesson = (input) => {
+    const data = normalizeJson(input);
+    const lesson = normalizeJson(data?.lesson ?? data?.visualLesson ?? data);
+    return lesson && Array.isArray(lesson.scenes) && lesson.scenes.length
+      ? lesson
+      : null;
+  };
+
+  const loadChapter = async (index, outline = chapterOutline, cache = chapterLessons) => {
+    const chapter = outline?.chapters?.[index];
+    if (!chapter || chapterLoading) return;
+
+    setActiveChapter(index);
+    setMessage("");
+    if (cache[index]) {
+      setVisualLesson(cache[index]);
+      return;
+    }
+
+    setVisualLesson(null);
+    setChapterLoading(true);
+    try {
+      let generated = null;
+      let chapterError = null;
+      try {
+        const response = await api.post(
+          `/ai/visual-chapters/generate?chapterIndex=${index}`,
+          requestPayload()
+        );
+        generated = normalizeLesson(response.data);
+      } catch (error) {
+        chapterError = error;
+        // Authentication and quota errors should not be hidden by a fallback.
+        if ([401, 403, 429].includes(error.response?.status)) throw error;
+      }
+
+      // Compatibility with the original backend visual-lesson endpoint.
+      // Send only the selected chapter, not the entire source again.
+      if (!generated) {
+        const lines = code.split(/\r?\n/);
+        const chapterCode = lines.slice(chapter.startLine - 1, chapter.endLine)
+          .map((line, offset) => `${chapter.startLine + offset}: ${line}`)
+          .join("\n");
+        try {
+          const response = await api.post("/ai/visual-lesson", {
+            language,
+            explanationLevel,
+            code: `Explain the following original source lines as a detailed visual lesson. Preserve the line numbers and cover every meaningful statement.\n${chapterCode}`,
+          });
+          generated = normalizeLesson(response.data);
+        } catch (fallbackError) {
+          if ([401, 403, 429].includes(fallbackError.response?.status)) throw fallbackError;
+          throw chapterError || fallbackError;
+        }
+      }
+
+      if (!generated) throw new Error("INVALID_CHAPTER_FORMAT");
+      setChapterLessons((previous) => ({ ...previous, [index]: generated }));
+      setVisualLesson(generated);
+      window.setTimeout(() => document.getElementById("learning-results")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    } catch (error) {
+      console.error("Visual chapter generation failed", {
+        status: error.response?.status,
+        response: error.response?.data,
+        message: error.message,
+      });
+      setMessage(error.response?.status === 429
+        ? "Gemini rate limit reached. Please try again later."
+        : [401, 403].includes(error.response?.status)
+          ? "Your session expired or access was denied. Please log in again."
+          : "Could not generate this chapter. Check the backend AI service and try again.");
+    } finally {
+      setChapterLoading(false);
+    }
+  };
+
+  const generateChapterOutline = async () => {
+    setLoading(true);
+    try {
+      // The outline is deterministic, so an unexpected backend outline response
+      // can never block the Visual Learning Studio from opening chapters.
+      const outline = buildLocalOutline();
+      setChapterOutline(outline);
+      setActiveChapter(0);
+      setLoading(false);
+      await loadChapter(0, outline, {});
+    } catch (error) {
+      console.error("Visual chapter outline failed", error);
+      setMessage("Could not prepare visual chapters. Please try again.");
+      setLoading(false);
+    }
+  };
+
+
   const handleGenerate = async () => {
     if (!validateCode()) return;
     clearOutputs();
     setLoading(true);
 
-    const endpoint = mode === "explain" ? "/ai/explain" : mode === "tutor" ? "/ai/interactive-lesson" : "/ai/visual-lesson";
+    if (mode === "visual") {
+      await generateChapterOutline();
+      return;
+    }
+
+    const endpoint = mode === "explain" ? "/ai/explain" : "/ai/interactive-lesson";
 
     try {
       const response = await api.post(endpoint, {
@@ -656,7 +790,7 @@ function CodeExplainer() {
             <textarea value={code} onChange={(e) => { setCode(e.target.value); clearOutputs(); }} placeholder="// Paste your code here..." spellCheck={false} className="w-full min-h-[360px] md:min-h-[430px] resize-y bg-[#0b0b16] text-gray-200 font-mono text-sm leading-7 p-6 outline-none placeholder:text-gray-600" />
             <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-t border-white/10"><div className="flex gap-4 text-xs text-gray-500"><span>{code ? code.split("\n").length : 0} Lines</span><span>{code.length} Characters</span></div><button onClick={handleExample} className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-2"><Code2 size={16} /> Load Example</button></div>
             <div className="p-5 md:p-6 border-t border-white/10 space-y-3">
-              <button onClick={handleGenerate} disabled={loading || !code.trim()} className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-4 font-semibold hover:from-purple-500 hover:to-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed">{loading ? <LoaderCircle size={20} className="animate-spin" /> : <WandSparkles size={20} />}{loading ? "Generating..." : mode === "explain" ? "Explain My Code" : mode === "tutor" ? "Generate Interactive Lesson" : "Generate Visual Lesson"}</button>
+              <button onClick={handleGenerate} disabled={loading || chapterLoading || !code.trim()} className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-4 font-semibold hover:from-purple-500 hover:to-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed">{loading || chapterLoading ? <LoaderCircle size={20} className="animate-spin" /> : <WandSparkles size={20} />}{loading || chapterLoading ? "Generating..." : mode === "explain" ? "Explain My Code" : mode === "tutor" ? "Generate Interactive Lesson" : "Generate Visual Lesson"}</button>
               {mode === "tutor" && <button onClick={loadDemo} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 py-3 text-sm font-medium text-purple-200 hover:bg-purple-500/20 disabled:opacity-40"><Play size={16} /> Try Demo Lesson (No API Required)</button>}
               {message && <p role="alert" className="text-sm text-purple-200 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">{message}</p>}
             </div>
@@ -672,6 +806,32 @@ function CodeExplainer() {
 
         {(result?.explanation || lesson || visualLesson) && <div id="learning-results" className="mt-8 flex items-center gap-2 text-sm text-purple-300"><CircleCheck size={18}/> Your learning content is ready below</div>}
 
+        {chapterOutline && mode === "visual" && (
+          <section className="mt-8 rounded-2xl border border-fuchsia-500/20 bg-[#11111f] p-5 md:p-7" aria-label="Visual learning chapters">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-bold text-white">Your Visual Learning Chapters</h3>
+                <p className="mt-2 text-sm text-gray-400">{chapterOutline.totalLines} lines · {chapterOutline.chapters.length} chapters · {completedChapters.length} completed</p>
+              </div>
+              <span className="text-sm text-fuchsia-300">{Math.round(completedChapters.length / chapterOutline.chapters.length * 100)}% completed</span>
+            </div>
+            <div className="mt-4 h-2 rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${completedChapters.length / chapterOutline.chapters.length * 100}%` }} /></div>
+            <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {chapterOutline.chapters.map((chapter) => (
+                <button key={chapter.index} type="button" disabled={chapterLoading} onClick={() => loadChapter(chapter.index)}
+                  className={`rounded-xl border p-4 text-left transition disabled:opacity-50 ${activeChapter === chapter.index ? "border-fuchsia-400/60 bg-fuchsia-500/15" : "border-white/10 bg-[#0b0b16] hover:border-fuchsia-400/40"}`}>
+                  <span className="flex items-center justify-between gap-2 text-sm font-semibold text-white">
+                    Chapter {chapter.index + 1}
+                    {completedChapters.includes(chapter.index) ? <CircleCheck size={17} className="text-green-400" /> : chapterLessons[chapter.index] ? <Check size={17} className="text-fuchsia-300" /> : null}
+                  </span>
+                  <span className="mt-1 block text-xs text-gray-400">Lines {chapter.startLine}–{chapter.endLine}</span>
+                </button>
+              ))}
+            </div>
+            {chapterLoading && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-fuchsia-300"><LoaderCircle size={17} className="animate-spin" /> Generating chapter {activeChapter + 1}...</p>}
+          </section>
+        )}
+
         {visualLesson && (
           <section className="mt-8 space-y-5" aria-label="Visual learning lesson">
             <div className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-5 md:p-7">
@@ -679,8 +839,13 @@ function CodeExplainer() {
               <h3 className="mt-3 text-2xl font-bold">{visualLesson.title || "Your animated code lesson"}</h3>
               {visualLesson.introduction && <p className="mt-3 text-gray-300 leading-7">{visualLesson.introduction}</p>}
             </div>
-            <AnimationEngine scenes={visualLesson.scenes} language={language} />
+            <AnimationEngine key={activeChapter} scenes={visualLesson.scenes} language={language} />
             {visualLesson.conclusion && <div className="rounded-2xl border border-white/10 bg-[#11111f] p-6"><h4 className="mb-2 font-semibold text-fuchsia-300">Lesson summary</h4><p className="text-gray-300 leading-7">{visualLesson.conclusion}</p></div>}
+            {chapterOutline && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#11111f] p-5">
+              <button type="button" disabled={chapterLoading || activeChapter === 0} onClick={() => loadChapter(activeChapter - 1)} className="flex items-center gap-2 rounded-lg border border-white/15 px-4 py-3 text-sm disabled:opacity-30"><ChevronLeft size={17} /> Previous Chapter</button>
+              <button type="button" onClick={() => setCompletedChapters((previous) => previous.includes(activeChapter) ? previous : [...previous, activeChapter])} className="flex items-center gap-2 rounded-lg bg-green-600/20 px-4 py-3 text-sm font-semibold text-green-300"><CircleCheck size={17} /> {completedChapters.includes(activeChapter) ? "Completed" : "Mark Complete"}</button>
+              <button type="button" disabled={chapterLoading || activeChapter >= chapterOutline.chapters.length - 1} onClick={() => loadChapter(activeChapter + 1)} className="flex items-center gap-2 rounded-lg bg-fuchsia-600 px-4 py-3 text-sm font-semibold disabled:opacity-30">Next Chapter <ChevronRight size={17} /></button>
+            </div>}
           </section>
         )}
 
