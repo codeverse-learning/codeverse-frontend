@@ -20,6 +20,28 @@ import {
 
 import api from "../services/api";
 
+// Remembers the last opened lesson on this browser, separately for each user and study pack.
+function getResumeKey(courseId) {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const userId = user?.userId || user?.id || user?.email || "guest";
+    return `codeverse:lastLesson:${userId}:${courseId}`;
+  } catch {
+    return `codeverse:lastLesson:guest:${courseId}`;
+  }
+}
+
+// Stores the most recently visited study pack for the Study Packs landing page.
+function rememberRecentPack(courseId) {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const userId = user?.userId || user?.id || user?.email || "guest";
+    localStorage.setItem(`codeverse:lastPack:${userId}`, courseId);
+  } catch {
+    // Learning remains available when storage is disabled.
+  }
+}
+
 function CourseLearning() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -51,11 +73,11 @@ function CourseLearning() {
         );
 
         if (!currentCourse || !currentCourse.published) {
-          throw new Error("Course not found or not published.");
+          throw new Error("Study pack not found or not published.");
         }
 
         if (!currentCourse.free) {
-          throw new Error("This course is not available for free.");
+          throw new Error("This study pack is not available for free.");
         }
 
         const modulesResponse = await api.get(
@@ -98,19 +120,28 @@ function CourseLearning() {
         setCourse(currentCourse);
         setModules(courseModules);
         setLessons(allLessons);
-        setSelectedLessonId(allLessons[0]?.id ?? null);
-
-        if (courseModules.length > 0) {
-          setExpandedModules({
-            [courseModules[0].id]: true,
-          });
+        let savedLessonId = null;
+        try {
+          savedLessonId = localStorage.getItem(getResumeKey(courseId));
+        } catch {
+          // Browsers with restricted storage still allow lessons to open.
         }
+
+        const resumedLesson = allLessons.find(
+          (lesson) => lesson.id === savedLessonId
+        );
+        const initialLesson = resumedLesson || allLessons[0];
+        setSelectedLessonId(initialLesson?.id ?? null);
+        if (initialLesson) rememberRecentPack(courseId);
+
+        const initialModuleId = initialLesson?.moduleId || courseModules[0]?.id;
+        setExpandedModules(initialModuleId ? { [initialModuleId]: true } : {});
       } catch (err) {
         if (!cancelled) {
           setError(
             err.response?.data?.message ||
               err.message ||
-              "Unable to load this course."
+              "Unable to load this study pack."
           );
         }
       } finally {
@@ -132,8 +163,18 @@ function CourseLearning() {
   const selectedLesson =
     selectedIndex >= 0 ? lessons[selectedIndex] : null;
 
+  const rememberLesson = (lesson) => {
+    try {
+      localStorage.setItem(getResumeKey(courseId), lesson.id);
+      rememberRecentPack(courseId);
+    } catch {
+      // Lesson navigation continues even when browser storage is disabled.
+    }
+  };
+
   const selectLesson = (lesson) => {
     setSelectedLessonId(lesson.id);
+    rememberLesson(lesson);
     setSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -143,6 +184,7 @@ function CourseLearning() {
 
     const lesson = lessons[index];
     setSelectedLessonId(lesson.id);
+    rememberLesson(lesson);
     setExpandedModules((previous) => ({
       ...previous,
       [lesson.moduleId]: true,
@@ -165,7 +207,7 @@ function CourseLearning() {
           size={38}
           className="animate-spin text-purple-400"
         />
-        <p className="text-gray-400">Loading your course...</p>
+        <p className="text-gray-400">Loading your study pack...</p>
       </div>
     );
   }
@@ -179,7 +221,7 @@ function CourseLearning() {
             className="mx-auto mb-4 text-red-400"
           />
           <h2 className="text-xl font-bold mb-3">
-            Unable to Open Course
+            Unable to Open Study Pack
           </h2>
           <p className="text-gray-400 text-sm mb-6">{error}</p>
           <button
@@ -197,7 +239,7 @@ function CourseLearning() {
     <div className="flex flex-col h-full">
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-bold text-lg">Course Content</h2>
+          <h2 className="font-bold text-lg">Study Pack Content</h2>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-400"
@@ -340,7 +382,7 @@ function CourseLearning() {
         <button
           onClick={() => setSidebarOpen(true)}
           className="lg:hidden p-2 rounded-lg border border-white/10"
-          aria-label="Open course content"
+          aria-label="Open study pack content"
         >
           <Menu size={21} />
         </button>
@@ -358,7 +400,7 @@ function CourseLearning() {
             <button
               className="absolute inset-0 bg-black/70 w-full"
               onClick={() => setSidebarOpen(false)}
-              aria-label="Close course content"
+              aria-label="Close study pack content"
             />
 
             <aside className="absolute left-0 top-0 bottom-0 w-[min(85vw,340px)] bg-[#0c0c18] border-r border-white/10">
@@ -380,7 +422,7 @@ function CourseLearning() {
                   Lessons Coming Soon
                 </h2>
                 <p className="text-gray-400 text-sm mt-3">
-                  No published lessons are available for this course yet.
+                  No published lessons are available for this study pack yet.
                 </p>
               </div>
             ) : (

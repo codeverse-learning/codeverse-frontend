@@ -15,6 +15,7 @@ import AiLearningHistory from "./pages/AiLearningHistory";
 
 import AnimationEngine from "./components/visual-learning/AnimationEngine";
 import VisualLearningStudio from "./components/visual-learning/VisualLearningStudio";
+import StudyPacks from "./pages/StudyPacks";
 
 function App() {
   return (
@@ -85,7 +86,11 @@ function App() {
             </div>
           }
         />
+
+        <Route path="/study-packs" element={<StudyPacks />} />
+        <Route path="/learn/:courseId" element={<CourseLearning />} />
       </Routes>
+
     </BrowserRouter>
   );
 }

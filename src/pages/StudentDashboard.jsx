@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -7,60 +7,26 @@ import {
   Code2,
   Trophy,
   BrainCircuit,
-  Clapperboard,
-  Settings,
   LogOut,
   Sparkles,
-  Clock3,
-  Layers3,
   FileText,
   ChevronRight,
-  RefreshCw,
   ArrowRight,
   Bug,
   Lightbulb,
   ClipboardCheck,
   WandSparkles,
-  GraduationCap,
   Menu,
   X,
 } from "lucide-react";
 
-import api from "../services/api";
 
 function StudentDashboard({ user }) {
   const navigate = useNavigate();
 
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const firstName = user?.fullName?.split(" ")[0] || "Student";
-
-  const fetchCourses = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response = await api.get("/courses");
-
-      const data = Array.isArray(response.data)
-        ? response.data
-        : response.data?.content || [];
-
-      setCourses(data.filter((course) => course.published));
-    } catch (err) {
-      console.error("Failed to load courses:", err);
-      setError("Unable to load available courses.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCourses();
-  }, []);
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -73,9 +39,9 @@ function StudentDashboard({ user }) {
     navigate("/code-explainer");
   };
 
-  const openVisualLearning = () => {
+  const openStudyPacks = () => {
     setSidebarOpen(false);
-    navigate("/visual-learning");
+    navigate("/study-packs");
   };
 
   const menu = [
@@ -94,19 +60,9 @@ function StudentDashboard({ user }) {
       action: openCodeExplainer,
     },
     {
-      name: "Visual Learning Studio",
-      icon: Clapperboard,
-      action: openVisualLearning,
-    },
-    {
-      name: "Explore Courses",
+      name: "Study Packs",
       icon: BookOpen,
-      action: () => {
-        setSidebarOpen(false);
-        document
-          .getElementById("courses")
-          ?.scrollIntoView({ behavior: "smooth" });
-      },
+      action: openStudyPacks,
     },
   ];
 
@@ -355,54 +311,6 @@ print(greet("CODEVERSE"))`}</code>
             </div>
           </section>
 
-          {/* AI Learning Tools */}
-          <section className="mb-10" id="ai-tools">
-            <div className="mb-6">
-              <div className="mb-2 flex items-center gap-2 text-xs text-purple-400">
-                <Sparkles size={16} />
-                LEARN WITH AI
-              </div>
-              <h2 className="text-xl font-bold">AI Learning Tools</h2>
-              <p className="mt-2 text-sm text-gray-400">
-                Choose how you want to understand your code.
-              </p>
-            </div>
-            <div className="grid gap-5 md:grid-cols-2">
-              <button
-                type="button"
-                onClick={openCodeExplainer}
-                className="group rounded-2xl border border-purple-500/20 bg-[#11111f] p-6 text-left transition hover:-translate-y-1 hover:border-purple-400/60"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10">
-                  <BrainCircuit className="text-purple-400" size={25} />
-                </div>
-                <h3 className="text-lg font-semibold">AI Code Explainer</h3>
-                <p className="mt-2 text-sm leading-6 text-gray-400">
-                  Get clear, step-by-step explanations of your code, logic, and syntax.
-                </p>
-                <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-purple-400">
-                  Explain Code <ArrowRight size={17} className="transition group-hover:translate-x-1" />
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={openVisualLearning}
-                className="group rounded-2xl border border-blue-500/20 bg-[#11111f] p-6 text-left transition hover:-translate-y-1 hover:border-blue-400/60"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
-                  <Clapperboard className="text-blue-400" size={25} />
-                </div>
-                <h3 className="text-lg font-semibold">Visual Learning Studio</h3>
-                <p className="mt-2 text-sm leading-6 text-gray-400">
-                  Watch animated code lessons with optional English voice narration.
-                </p>
-                <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-blue-400">
-                  Start Visual Learning <ArrowRight size={17} className="transition group-hover:translate-x-1" />
-                </span>
-              </button>
-            </div>
-          </section>
-
           {/* AI Features */}
           <section className="mb-12">
             <div className="mb-6">
@@ -443,126 +351,6 @@ print(greet("CODEVERSE"))`}</code>
                 </button>
               ))}
             </div>
-          </section>
-
-          {/* Secondary Feature - Courses */}
-          <section id="courses" className="mb-10 scroll-mt-8">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <div>
-                <div className="flex items-center gap-2 text-purple-400 text-xs mb-2">
-                  <GraduationCap size={15} />
-                  ADDITIONAL LEARNING RESOURCES
-                </div>
-
-                <h2 className="text-xl font-bold">
-                  Explore Courses
-                </h2>
-
-                <p className="text-sm text-gray-500 mt-2">
-                  Optional programming lessons to support your
-                  learning journey.
-                </p>
-              </div>
-
-              <button
-                onClick={fetchCourses}
-                className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300"
-              >
-                <RefreshCw size={16} />
-                Refresh
-              </button>
-            </div>
-
-            {error && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 mb-5 text-red-300 text-sm">
-                {error}
-              </div>
-            )}
-
-            {loading ? (
-              <div className="text-center py-12 text-gray-400">
-                Loading courses...
-              </div>
-            ) : courses.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-[#11111f] p-10 text-center">
-                <BookOpen
-                  className="mx-auto mb-3 text-gray-500"
-                  size={32}
-                />
-
-                <p className="text-gray-400">
-                  No published courses available yet.
-                </p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {courses.map((course) => (
-                  <button
-                    key={course.id}
-                    type="button"
-                    disabled={!course.free}
-                    onClick={() =>
-                      navigate(`/learn/${course.id}`)
-                    }
-                    className={`text-left rounded-2xl border border-white/10 bg-[#11111f] p-5 transition group ${
-                      course.free
-                        ? "cursor-pointer hover:border-purple-500/50"
-                        : "cursor-not-allowed opacity-75"
-                    }`}
-                  >
-                    <h3 className="font-semibold text-lg">
-                      {course.title}
-                    </h3>
-
-                    <p className="text-sm text-gray-400 mt-2 line-clamp-3">
-                      {course.description}
-                    </p>
-
-                    <div className="flex gap-2 flex-wrap mt-4">
-                      <span className="text-xs px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300">
-                        {course.difficultyLevel}
-                      </span>
-
-                      <span className="text-xs px-3 py-1 rounded-lg bg-blue-500/10 text-blue-300">
-                        {course.category}
-                      </span>
-
-                      <span className="text-xs px-3 py-1 rounded-lg bg-green-500/10 text-green-300">
-                        {course.free ? "Free" : "Paid"}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4 mt-5 py-4 border-y border-white/10 text-xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <Layers3 size={15} />
-                        {course.totalModules ?? 0} Modules
-                      </span>
-
-                      <span className="flex items-center gap-1">
-                        <FileText size={15} />
-                        {course.totalLessons ?? 0} Lessons
-                      </span>
-
-                      <span className="flex items-center gap-1">
-                        <Clock3 size={15} />
-                        {course.estimatedDurationHours ?? 0}h
-                      </span>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between">
-                      <p className="text-xs text-gray-500">
-                        {course.instructorName}
-                      </p>
-
-                      <span className="text-xs text-purple-400 flex items-center gap-1">
-                        {course.free ? "Start Learning" : "Unavailable"}
-                        <ChevronRight size={15} />
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </section>
 
           {/* Upcoming Features */}
