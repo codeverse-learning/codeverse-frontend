@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   BookOpen,
+  Clock3,
   Code2,
   Trophy,
   BrainCircuit,
@@ -39,6 +40,11 @@ function StudentDashboard({ user }) {
     navigate("/code-explainer");
   };
 
+  const openTimeMachine = () => {
+    setSidebarOpen(false);
+    navigate("/code-time-machine");
+  };
+
   const openStudyPacks = () => {
     setSidebarOpen(false);
     navigate("/study-packs");
@@ -53,6 +59,11 @@ function StudentDashboard({ user }) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       },
       active: true,
+    },
+    {
+      name: "AI Code Time Machine",
+      icon: Clock3,
+      action: openTimeMachine,
     },
     {
       name: "AI Code Explainer",
@@ -182,7 +193,7 @@ function StudentDashboard({ user }) {
 
             <div>
               <h2 className="font-semibold">
-                AI Learning Dashboard
+                Code Time Machine Dashboard
               </h2>
               <p className="text-xs text-gray-500">
                 Student Portal
@@ -228,8 +239,7 @@ function StudentDashboard({ user }) {
             </h1>
 
             <p className="text-gray-400 mt-2 text-sm">
-              Ready to understand your code and learn something
-              new today?
+              Ready to travel through your code execution, one step at a time?
             </p>
           </section>
 
@@ -248,31 +258,28 @@ function StudentDashboard({ user }) {
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
                 <div className="max-w-2xl">
                   <h2 className="text-3xl md:text-4xl font-bold leading-tight">
-                    Understand Your Code
+                    Travel Through Your Code
                     <br />
                     <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                      with AI
+                      with Code Time Machine
                     </span>
                   </h2>
 
                   <p className="text-gray-400 mt-5 leading-7">
-                    Paste your programming code and discover how
-                    it works. CODEVERSE is designed to help you
-                    understand code structure, logic, syntax,
-                    and programming concepts.
+                    See how Python code runs step by step. Follow the active line, watch variables change, and rewind execution to understand the logic. Start with our interactive demo.
                   </p>
 
                   <button
-                    onClick={openCodeExplainer}
+                    onClick={openTimeMachine}
                     className="mt-7 inline-flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-7 py-4 font-semibold hover:from-purple-500 hover:to-blue-500 transition"
                   >
-                    <WandSparkles size={20} />
-                    Start Code Explainer
+                    <Clock3 size={20} />
+                    Launch Code Time Machine
                     <ArrowRight size={19} />
                   </button>
 
                   <p className="text-xs text-gray-500 mt-4">
-                    Explore AI-powered explanations and interactive learning tools.
+                    Interactive Python demo now · Real execution tracing coming next.
                   </p>
                 </div>
 
@@ -315,12 +322,11 @@ print(greet("CODEVERSE"))`}</code>
           <section className="mb-12">
             <div className="mb-6">
               <h2 className="text-xl font-bold">
-                Explore AI Code Learning
+                Other AI Learning Tools
               </h2>
 
               <p className="text-sm text-gray-500 mt-2">
-                Everything you need to understand programming
-                code more clearly.
+                Explore explanations, debugging, and deeper code analysis.
               </p>
             </div>
 
