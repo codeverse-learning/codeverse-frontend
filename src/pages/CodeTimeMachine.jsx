@@ -14,7 +14,7 @@ const LANGUAGES = [
   { id: "java", label: "Java", available: true},
   { id: "c", label: "C", available: true },
   { id: "cpp", label: "C++", available: true },
-  { id: "csharp", label: "C#", available: false },
+  { id: "csharp", label: "C#", available: true },
   { id: "php", label: "PHP", available: false },
   { id: "go", label: "Go", available: false },
   { id: "kotlin", label: "Kotlin", available: false },
@@ -48,6 +48,11 @@ const LANGUAGE_EXAMPLES = {
     variables: "#include <iostream>\nint main() {\n  int x = 5;\n  int y = 10;\n  int total = x + y;\n  std::cout << total << std::endl;\n  return 0;\n}",
     loop: "#include <iostream>\nint main() {\n  int total = 0;\n  for (int n = 1; n <= 3; n++) {\n    total += n;\n    std::cout << total << std::endl;\n  }\n  return 0;\n}",
     condition: "#include <iostream>\nint main() {\n  int score = 75;\n  if (score >= 50) {\n    std::cout << \"Pass\" << std::endl;\n  } else {\n    std::cout << \"Fail\" << std::endl;\n  }\n  return 0;\n}",
+  },
+  csharp: {
+    variables: "using System;\nclass Program {\n  static void Main() {\n    int x = 5;\n    int y = 10;\n    int total = x + y;\n    Console.WriteLine(total);\n  }\n}",
+    loop: "using System;\nclass Program {\n  static void Main() {\n    int total = 0;\n    for (int n = 1; n <= 3; n++) {\n      total += n;\n      Console.WriteLine(total);\n    }\n  }\n}",
+    condition: "using System;\nclass Program {\n  static void Main() {\n    int score = 75;\n    if (score >= 50) {\n      Console.WriteLine(\"Pass\");\n    } else {\n      Console.WriteLine(\"Fail\");\n    }\n  }\n}",
   },
   javascript: {
     variables: "let x = 5;\nlet y = 10;\nlet total = x + y;\nconsole.log(total);",
@@ -210,11 +215,11 @@ export default function CodeTimeMachine() {
       <main className="mx-auto max-w-7xl px-5 py-9 md:px-10">
         <div className="mb-8">
           <span className="inline-flex items-center gap-2 rounded-full border border-purple-500/25 bg-purple-500/10 px-3 py-1.5 text-xs text-purple-300">
-            <Sparkles size={14} /> LIVE CODE TRACING · PYTHON / JAVASCRIPT / JAVA / C / C++
+            <Sparkles size={14} /> LIVE CODE TRACING · PYTHON / JAVASCRIPT / JAVA / C / C++ / C#
           </span>
           <h1 className="mt-4 text-3xl font-bold md:text-4xl">AI Code <span className="text-purple-400">Time Machine</span></h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-400">
-            Write code and explore its execution step by step. C and C++ use GCC/GDB-based source tracing in the local development sandbox.
+            Write code and explore its execution step by step. C and C++ use GCC/GDB tracing; C# uses experimental Roslyn instrumentation in the local development sandbox.
           </p>
         </div>
 
@@ -238,7 +243,7 @@ export default function CodeTimeMachine() {
             </select>
             <ChevronDown size={17} className="pointer-events-none absolute right-3 top-3.5 text-purple-300" />
           </div>
-          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python, JavaScript, Java, C and C++ execution available. More languages coming soon.</p>
+          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python, JavaScript, Java, C, C++ and C# available for local testing. More languages coming soon.</p>
         </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -254,7 +259,7 @@ export default function CodeTimeMachine() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,1fr)]">
           <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <span className="flex items-center gap-2 text-sm font-semibold"><Code2 size={17} className="text-purple-400" /> {language === "python" ? "main.py" : language === "javascript" ? "main.js" : language === "java" ? "Main.java" : language === "c" ? "main.c" : "main.cpp"}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold"><Code2 size={17} className="text-purple-400" /> {language === "python" ? "main.py" : language === "javascript" ? "main.js" : language === "java" ? "Main.java" : language === "c" ? "main.c" : language === "cpp" ? "main.cpp" : language === "csharp" ? "Program.cs" : "main.txt"}</span>
               <span className="text-xs text-gray-500">{LANGUAGES.find((item) => item.id === language)?.label} · Editable code</span>
             </div>
             <div className="p-4 md:p-6">
