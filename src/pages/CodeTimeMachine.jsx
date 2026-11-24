@@ -16,11 +16,7 @@ const LANGUAGES = [
   { id: "cpp", label: "C++", available: true },
   { id: "csharp", label: "C#", available: true },
   { id: "php", label: "PHP", available: true },
-  { id: "go", label: "Go", available: false },
-  { id: "kotlin", label: "Kotlin", available: false },
-  { id: "dart", label: "Dart", available: false },
-  { id: "r", label: "R", available: false },
-  { id: "bash", label: "Bash", available: false },
+  { id: "dart", label: "Dart", available: true },
 ];
 
 const EXAMPLES = {
@@ -39,6 +35,11 @@ const EXAMPLES = {
 };
 
 const LANGUAGE_EXAMPLES = {
+  dart: {
+    variables: "void main() {\n  int x = 5;\n  int y = 10;\n  int total = x + y;\n  print(total);\n}",
+    loop: "void main() {\n  int total = 0;\n  for (int n = 1; n <= 3; n++) {\n    total += n;\n    print(total);\n  }\n}",
+    condition: "void main() {\n  int score = 75;\n  String result;\n  if (score >= 50) {\n    result = 'Pass';\n  } else {\n    result = 'Fail';\n  }\n  print(result);\n}",
+  },
   php: {
     variables: "<?php\n$x = 5;\n$y = 10;\n$total = $x + $y;\necho $total . \"\\n\";",
     loop: "<?php\n$total = 0;\nfor ($n = 1; $n <= 3; $n++) {\n  $total += $n;\n  echo $total . \"\\n\";\n}",
@@ -123,7 +124,7 @@ export default function CodeTimeMachine() {
 
   useEffect(() => {
     if (!playing || stepIndex >= last || last < 0) return undefined;
-    const timer = setTimeout(() => setStepIndex((n) => Math.min(last, n + 1)), Math.round(1100 / speed));
+    const timer = setTimeout(() => setStepIndex((n) => Math.min(last, n + 1)), Math.round(2000 / speed));
     return () => clearTimeout(timer);
   }, [playing, stepIndex, last, speed]);
 
@@ -224,18 +225,18 @@ export default function CodeTimeMachine() {
       <main className="mx-auto max-w-7xl px-5 py-9 md:px-10">
         <div className="mb-8">
           <span className="inline-flex items-center gap-2 rounded-full border border-purple-500/25 bg-purple-500/10 px-3 py-1.5 text-xs text-purple-300">
-            <Sparkles size={14} /> LIVE CODE TRACING · PYTHON / JAVASCRIPT / JAVA / C / C++ / C# / PHP
+            <Sparkles size={14} /> LIVE CODE TRACING · PYTHON / JAVASCRIPT / JAVA / C / C++ / C# / PHP / DART
           </span>
           <h1 className="mt-4 text-3xl font-bold md:text-4xl">AI Code <span className="text-purple-400">Time Machine</span></h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-400">
-            Write code and explore its execution step by step. C and C++ use GCC/GDB tracing; C# uses experimental Roslyn instrumentation, and PHP uses Xdebug in the local development sandbox.
+            Write code and explore its execution step by step. C and C++ use GCC/GDB tracing; C# uses experimental Roslyn instrumentation, PHP uses Xdebug, and Dart uses the Dart VM Service in the local development sandbox.
           </p>
         </div>
 
         <div className="mb-5 rounded-2xl border border-white/10 bg-[#11111f] p-4 md:p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <label htmlFor="time-machine-language" className="text-sm font-semibold text-white">Programming language</label>
-            <span className="text-xs text-gray-500">More languages coming later</span>
+            <span className="text-xs text-gray-500">8 supported languages</span>
           </div>
           <div className="relative max-w-sm">
             <select
@@ -245,14 +246,14 @@ export default function CodeTimeMachine() {
               className="w-full appearance-none rounded-xl border border-purple-500/30 bg-[#090914] px-4 py-3 pr-10 text-sm text-white outline-none focus:border-purple-400"
             >
               {LANGUAGES.map((item) => (
-                <option key={item.id} value={item.id} disabled={!item.available}>
-                  {item.label}{item.available ? " — Available" : " — Coming soon"}
+                <option key={item.id} value={item.id} >
+                  {item.label}
                 </option>
               ))}
             </select>
             <ChevronDown size={17} className="pointer-events-none absolute right-3 top-3.5 text-purple-300" />
           </div>
-          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python, JavaScript, Java, C, C++, C# and PHP available for local testing. More languages coming soon.</p>
+          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python, JavaScript, Java, C, C++, C#, PHP and Dart available for local testing.</p>
         </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -268,7 +269,7 @@ export default function CodeTimeMachine() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,1fr)]">
           <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <span className="flex items-center gap-2 text-sm font-semibold"><Code2 size={17} className="text-purple-400" /> {language === "python" ? "main.py" : language === "javascript" ? "main.js" : language === "java" ? "Main.java" : language === "c" ? "main.c" : language === "cpp" ? "main.cpp" : language === "csharp" ? "Program.cs" : language === "php" ? "main.php" : "main.txt"}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold"><Code2 size={17} className="text-purple-400" /> {language === "python" ? "main.py" : language === "javascript" ? "main.js" : language === "java" ? "Main.java" : language === "c" ? "main.c" : language === "cpp" ? "main.cpp" : language === "csharp" ? "Program.cs" : language === "php" ? "main.php" : language === "dart" ? "main.dart" : "main.txt"}</span>
               <span className="text-xs text-gray-500">{LANGUAGES.find((item) => item.id === language)?.label} · Editable code</span>
             </div>
             <div className="p-4 md:p-6">
