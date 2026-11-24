@@ -15,7 +15,7 @@ const LANGUAGES = [
   { id: "c", label: "C", available: true },
   { id: "cpp", label: "C++", available: true },
   { id: "csharp", label: "C#", available: true },
-  { id: "php", label: "PHP", available: false },
+  { id: "php", label: "PHP", available: true },
   { id: "go", label: "Go", available: false },
   { id: "kotlin", label: "Kotlin", available: false },
   { id: "dart", label: "Dart", available: false },
@@ -39,6 +39,11 @@ const EXAMPLES = {
 };
 
 const LANGUAGE_EXAMPLES = {
+  php: {
+    variables: "<?php\n$x = 5;\n$y = 10;\n$total = $x + $y;\necho $total . \"\\n\";",
+    loop: "<?php\n$total = 0;\nfor ($n = 1; $n <= 3; $n++) {\n  $total += $n;\n  echo $total . \"\\n\";\n}",
+    condition: "<?php\n$score = 75;\nif ($score >= 50) {\n  $result = \"Pass\";\n} else {\n  $result = \"Fail\";\n}\necho $result . \"\\n\";",
+  },
   c: {
     variables: "#include <stdio.h>\nint main(void) {\n  int x = 5;\n  int y = 10;\n  int total = x + y;\n  printf(\"%d\\n\", total);\n  return 0;\n}",
     loop: "#include <stdio.h>\nint main(void) {\n  int total = 0;\n  for (int n = 1; n <= 3; n++) {\n    total += n;\n    printf(\"%d\\n\", total);\n  }\n  return 0;\n}",
@@ -65,6 +70,10 @@ const LANGUAGE_EXAMPLES = {
     condition: "public class Main {\n  public static void main(String[] args) {\n    int score = 75;\n    String result = score >= 50 ? \"Pass\" : \"Fail\";\n    System.out.println(result);\n  }\n}",
   },
 };
+
+function formatVariable(value) {
+  return value !== null && typeof value === "object" ? JSON.stringify(value) : String(value);
+}
 
 function getExampleCode(language, key) {
   return LANGUAGE_EXAMPLES[language]?.[key] ?? EXAMPLES[key].code;
@@ -99,7 +108,7 @@ export default function CodeTimeMachine() {
       name,
       value,
       oldValue,
-      change: !previous ? null : !existed ? "new" : oldValue !== value ? "changed" : null,
+      change: !previous ? null : !existed ? "new" : formatVariable(oldValue) !== formatVariable(value) ? "changed" : null,
     };
   });
   const removedVariables = previous
@@ -215,11 +224,11 @@ export default function CodeTimeMachine() {
       <main className="mx-auto max-w-7xl px-5 py-9 md:px-10">
         <div className="mb-8">
           <span className="inline-flex items-center gap-2 rounded-full border border-purple-500/25 bg-purple-500/10 px-3 py-1.5 text-xs text-purple-300">
-            <Sparkles size={14} /> LIVE CODE TRACING · PYTHON / JAVASCRIPT / JAVA / C / C++ / C#
+            <Sparkles size={14} /> LIVE CODE TRACING · PYTHON / JAVASCRIPT / JAVA / C / C++ / C# / PHP
           </span>
           <h1 className="mt-4 text-3xl font-bold md:text-4xl">AI Code <span className="text-purple-400">Time Machine</span></h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-gray-400">
-            Write code and explore its execution step by step. C and C++ use GCC/GDB tracing; C# uses experimental Roslyn instrumentation in the local development sandbox.
+            Write code and explore its execution step by step. C and C++ use GCC/GDB tracing; C# uses experimental Roslyn instrumentation, and PHP uses Xdebug in the local development sandbox.
           </p>
         </div>
 
@@ -243,7 +252,7 @@ export default function CodeTimeMachine() {
             </select>
             <ChevronDown size={17} className="pointer-events-none absolute right-3 top-3.5 text-purple-300" />
           </div>
-          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python, JavaScript, Java, C, C++ and C# available for local testing. More languages coming soon.</p>
+          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python, JavaScript, Java, C, C++, C# and PHP available for local testing. More languages coming soon.</p>
         </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -259,7 +268,7 @@ export default function CodeTimeMachine() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,1fr)]">
           <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <span className="flex items-center gap-2 text-sm font-semibold"><Code2 size={17} className="text-purple-400" /> {language === "python" ? "main.py" : language === "javascript" ? "main.js" : language === "java" ? "Main.java" : language === "c" ? "main.c" : language === "cpp" ? "main.cpp" : language === "csharp" ? "Program.cs" : "main.txt"}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold"><Code2 size={17} className="text-purple-400" /> {language === "python" ? "main.py" : language === "javascript" ? "main.js" : language === "java" ? "Main.java" : language === "c" ? "main.c" : language === "cpp" ? "main.cpp" : language === "csharp" ? "Program.cs" : language === "php" ? "main.php" : "main.txt"}</span>
               <span className="text-xs text-gray-500">{LANGUAGES.find((item) => item.id === language)?.label} · Editable code</span>
             </div>
             <div className="p-4 md:p-6">
@@ -364,7 +373,7 @@ export default function CodeTimeMachine() {
                       const priorVars = index > 0 ? (steps[index - 1].variables ?? {}) : null;
                       const stepVars = step.variables ?? {};
                       const updates = priorVars ? Object.keys(stepVars).filter(
-                        (key) => !Object.prototype.hasOwnProperty.call(priorVars, key) || priorVars[key] !== stepVars[key]
+                        (key) => !Object.prototype.hasOwnProperty.call(priorVars, key) || formatVariable(priorVars[key]) !== formatVariable(stepVars[key])
                       ).length : 0;
                       return (
                         <button
@@ -434,14 +443,14 @@ export default function CodeTimeMachine() {
                             change === "new" ? "bg-blue-500/20 text-blue-300" : "bg-amber-500/20 text-amber-300"
                           }`}>{change === "new" ? "NEW" : "CHANGED"}</span>
                         )}
-                        <code className="break-all text-right text-green-300">{String(value)}</code>
+                        <code className="break-all text-right text-green-300">{formatVariable(value)}</code>
                       </div>
                     </div>
                     {change === "changed" && (
                       <p className="mt-2 break-all font-mono text-xs text-gray-400">
-                        <span className="text-red-300">{String(oldValue)}</span>
+                        <span className="text-red-300">{formatVariable(oldValue)}</span>
                         <span className="mx-2">→</span>
-                        <span className="text-green-300">{String(value)}</span>
+                        <span className="text-green-300">{formatVariable(value)}</span>
                       </p>
                     )}
                   </div>
