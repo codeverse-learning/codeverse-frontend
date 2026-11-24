@@ -16,7 +16,7 @@ import {
   Bug,
   Lightbulb,
   ClipboardCheck,
-  WandSparkles,
+  Globe,
   Menu,
   X,
 } from "lucide-react";
@@ -45,6 +45,11 @@ function StudentDashboard({ user }) {
     navigate("/code-time-machine");
   };
 
+  const openLivePlayground = () => {
+    setSidebarOpen(false);
+    navigate("/live-playground");
+  };
+
   const openStudyPacks = () => {
     setSidebarOpen(false);
     navigate("/study-packs");
@@ -64,6 +69,11 @@ function StudentDashboard({ user }) {
       name: "AI Code Time Machine",
       icon: Clock3,
       action: openTimeMachine,
+    },
+    {
+      name: "Live Code Playground",
+      icon: Globe,
+      action: openLivePlayground,
     },
     {
       name: "AI Code Explainer",
@@ -193,7 +203,7 @@ function StudentDashboard({ user }) {
 
             <div>
               <h2 className="font-semibold">
-                Code Time Machine Dashboard
+                Student Dashboard
               </h2>
               <p className="text-xs text-gray-500">
                 Student Portal
@@ -239,7 +249,7 @@ function StudentDashboard({ user }) {
             </h1>
 
             <p className="text-gray-400 mt-2 text-sm">
-              Ready to travel through your code execution, one step at a time?
+              Ready to learn, experiment, and build your coding skills?
             </p>
           </section>
 
@@ -266,7 +276,7 @@ function StudentDashboard({ user }) {
                   </h2>
 
                   <p className="text-gray-400 mt-5 leading-7">
-                    See how Python code runs step by step. Follow the active line, watch variables change, and rewind execution to understand the logic. Start with our interactive demo.
+                    Explore code execution step by step across eight programming languages. Follow the active line, watch variables change, and rewind execution to understand the logic.
                   </p>
 
                   <button
@@ -279,7 +289,7 @@ function StudentDashboard({ user }) {
                   </button>
 
                   <p className="text-xs text-gray-500 mt-4">
-                    Interactive Python demo now · Real execution tracing coming next.
+                    Python · JavaScript · Java · C · C++ · C# · PHP · Dart
                   </p>
                 </div>
 
@@ -315,6 +325,29 @@ print(greet("CODEVERSE"))`}</code>
                   </div>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* Live Code Playground */}
+          <section className="mb-10 rounded-3xl border border-blue-500/25 bg-gradient-to-br from-blue-500/10 via-[#11111f] to-purple-500/10 p-7 md:p-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="max-w-2xl">
+                <div className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-blue-300">
+                  <Globe size={18} /> INTERACTIVE WEB DEVELOPMENT
+                </div>
+                <h2 className="text-2xl font-bold">Live Code Playground</h2>
+                <p className="mt-3 text-sm leading-7 text-gray-400">
+                  Write HTML, CSS and JavaScript in a professional code editor and see your results instantly with a live browser preview.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {["HTML", "CSS", "JavaScript"].map((language) => (
+                    <span key={language} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300">{language}</span>
+                  ))}
+                </div>
+              </div>
+              <button onClick={openLivePlayground} className="inline-flex shrink-0 items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4 font-semibold hover:from-purple-500 hover:to-blue-500 transition">
+                <Code2 size={20} /> Launch Playground <ArrowRight size={18} />
+              </button>
             </div>
           </section>
 

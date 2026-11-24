@@ -1,7 +1,9 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/layout/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -12,6 +14,8 @@ import CodeExplainer from "./pages/CodeExplainer";
 import AiLearningHistory from "./pages/AiLearningHistory";
 import StudyPacks from "./pages/StudyPacks";
 import CodeTimeMachine from "./pages/CodeTimeMachine";
+import LivePlayground from "./pages/LivePlayground";
+
 import AnimationEngine from "./components/visual-learning/AnimationEngine";
 import VisualLearningStudio from "./components/visual-learning/VisualLearningStudio";
 
@@ -19,26 +23,85 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<><Navbar /><Home /></>} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/github/callback" element={<GithubCallback />} />
 
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={
+            <>
+              <Navbar />
+              <Home />
+            </>
+          }
+        />
+
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/register" element={<Register />} />
+
+        <Route
+          path="/github/callback"
+          element={<GithubCallback />}
+        />
+
+        {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/code-time-machine" element={<CodeTimeMachine />} />
-          <Route path="/code-explainer" element={<CodeExplainer />} />
-          <Route path="/visual-learning" element={<VisualLearningStudio />} />
-          <Route path="/ai/history" element={<AiLearningHistory />} />
-          <Route path="/study-packs" element={<StudyPacks />} />
-          <Route path="/learn/:courseId" element={<CourseLearning />} />
+
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="/code-time-machine"
+            element={<CodeTimeMachine />}
+          />
+
+          <Route
+            path="/code-explainer"
+            element={<CodeExplainer />}
+          />
+
+          <Route
+            path="/visual-learning"
+            element={<VisualLearningStudio />}
+          />
+
+          <Route
+            path="/ai/history"
+            element={<AiLearningHistory />}
+          />
+
+          <Route
+            path="/study-packs"
+            element={<StudyPacks />}
+          />
+
+          <Route
+            path="/learn/:courseId"
+            element={<CourseLearning />}
+          />
+
+          {/* Live Code Playground */}
+          <Route
+            path="/live-playground"
+            element={<LivePlayground />}
+          />
+
         </Route>
 
-        <Route path="/animation-test" element={
-          <div className="min-h-screen bg-[#080812] p-6">
-            <div className="mx-auto max-w-4xl"><AnimationEngine /></div>
-          </div>
-        } />
+        {/* Animation Development Test */}
+        <Route
+          path="/animation-test"
+          element={
+            <div className="min-h-screen bg-[#080812] p-6">
+              <div className="mx-auto max-w-4xl">
+                <AnimationEngine />
+              </div>
+            </div>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );
