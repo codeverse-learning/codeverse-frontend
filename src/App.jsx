@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Navbar from "./components/layout/Navbar";
@@ -12,9 +11,11 @@ import GithubCallback from "./pages/GithubCallback";
 import CourseLearning from "./pages/CourseLearning";
 import CodeExplainer from "./pages/CodeExplainer";
 import AiLearningHistory from "./pages/AiLearningHistory";
-import StudyPacks from "./pages/StudyPacks";
 import CodeTimeMachine from "./pages/CodeTimeMachine";
 import LivePlayground from "./pages/LivePlayground";
+
+// Study Packs Feature
+import StudyPacks from "./features/study-packs/pages/StudyPacks";
 
 import AnimationEngine from "./components/visual-learning/AnimationEngine";
 import VisualLearningStudio from "./components/visual-learning/VisualLearningStudio";
@@ -72,11 +73,13 @@ function App() {
             element={<AiLearningHistory />}
           />
 
+          {/* AI Study Packs */}
           <Route
             path="/study-packs"
             element={<StudyPacks />}
           />
 
+          {/* Course Learning */}
           <Route
             path="/learn/:courseId"
             element={<CourseLearning />}

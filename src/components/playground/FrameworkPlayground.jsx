@@ -100,16 +100,18 @@ export default function FrameworkPlayground({
 
       {/* Sandpack Environment */}
       <SandpackProvider
-        key={`${framework.id}-${resetKey}`}
+        key={`$DIL3-$DIL4`}
         template={framework.template}
+        files={framework.files}
         theme="dark"
         options={{
-          autorun: true,
-          autoReload: true,
-          recompileMode: "delayed",
-          recompileDelay: 700,
+            activeFile: framework.activeFile,
+            autorun: true,
+            autoReload: true,
+            recompileMode: "delayed",
+            recompileDelay: 700,
         }}
-      >
+        >
 
         <div className="grid gap-px bg-white/10 xl:grid-cols-2">
 
