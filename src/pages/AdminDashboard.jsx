@@ -44,6 +44,11 @@ const initialForm = {
 function AdminDashboard({ user }) {
   const navigate = useNavigate();
 
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("ALL");
+  const [status, setStatus] = useState("ALL");
+  const [sort, setSort] = useState("TITLE");
+  const [generatorOpen, setGeneratorOpen] = useState(true);
   const [courses, setCourses] = useState([]);
   const [contentCourse, setContentCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -314,13 +319,18 @@ function AdminDashboard({ user }) {
   ];
 
   const menu = [
-    { name: "Dashboard", icon: LayoutDashboard, active: true },
-    { name: "Manage Courses", icon: BookOpen },
-    { name: "Manage Modules", icon: Layers3 },
-    { name: "Manage Lessons", icon: FileText },
-    { name: "Students", icon: Users },
-    { name: "Settings", icon: Settings },
+    { name: "Overview", icon: LayoutDashboard, target: "overview" },
+    { name: "AI Generator", icon: Sparkles, target: "generator" },
+    { name: "Manage Courses", icon: BookOpen, target: "courses" },
   ];
+  const categories = [...new Set(courses.map(c => c.category).filter(Boolean))].sort();
+  const visibleCourses = courses.filter(c => {
+    const q = search.trim().toLowerCase();
+    return (!q || [c.title,c.programmingLanguage,c.description].some(v => String(v || "").toLowerCase().includes(q))) &&
+      (category === "ALL" || c.category === category) &&
+      (status === "ALL" || Boolean(c.published) === (status === "PUBLISHED"));
+  }).sort((a,b) => sort === "LESSONS" ? (b.totalLessons || 0)-(a.totalLessons || 0) : sort === "DRAFT" ? Number(Boolean(a.published))-Number(Boolean(b.published)) || String(a.title).localeCompare(String(b.title)) : String(a.title).localeCompare(String(b.title)));
+  const languageLabel = (language) => ({html:"HTML",css:"CSS",javascript:"JS",typescript:"TS",python:"PY",java:"JV",react:"JSX",flutter:"FL",dart:"DT",sql:"SQL",php:"PHP","c++":"C++","c#":"C#",c:"C"}[String(language || "").toLowerCase()] || String(language || "CV").slice(0,3).toUpperCase());
 
   const inputClass =
     "w-full bg-[#0c0c18] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-purple-500 transition";
@@ -335,7 +345,7 @@ function AdminDashboard({ user }) {
   return (
     <div className="min-h-screen bg-[#080812] text-white flex">
       {/* Sidebar */}
-      <aside className="hidden lg:flex w-64 min-h-screen bg-[#0c0c18] border-r border-white/10 flex-col p-5">
+      <aside className="hidden lg:flex w-60 sticky top-0 h-screen shrink-0 bg-[#0c0c18] border-r border-white/10 flex-col p-5">
         <div className="flex items-center gap-3 mb-10 mt-2">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center font-bold text-xl">
             C
@@ -352,18 +362,11 @@ function AdminDashboard({ user }) {
         </p>
 
         <nav className="space-y-2">
-          {menu.map(({ name, icon: Icon, active }) => (
-            <div
-              key={name}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm ${
-                active
-                  ? "bg-purple-500/10 border border-purple-500/20 text-purple-300"
-                  : "text-gray-400 hover:bg-white/5"
-              }`}
-            >
+          {menu.map(({ name, icon: Icon, target }) => (
+            <a key={name} href={`#${target}`} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-gray-300 hover:bg-purple-500/10 hover:text-purple-300">
               <Icon size={19} />
               {name}
-            </div>
+            </a>
           ))}
         </nav>
 
@@ -401,7 +404,7 @@ function AdminDashboard({ user }) {
             </div>
 
             <button
-              onClick={logout}
+              disabled={generating || saving || deleting} onClick={logout}
               className="p-3 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10"
               title="Logout"
             >
@@ -412,13 +415,13 @@ function AdminDashboard({ user }) {
 
         <div className="p-5 md:p-8 max-w-7xl mx-auto">
           {/* Welcome */}
-          <section className="mb-8">
+          <section id="overview" className="scroll-mt-24 mb-8 rounded-3xl border border-purple-500/20 bg-gradient-to-br from-[#211638] via-[#141426] to-[#101827] p-6 md:p-9">
             <p className="text-purple-400 text-sm mb-2">
               Administration Overview
             </p>
 
             <h1 className="text-3xl font-bold">
-              Welcome, {user?.fullName?.split(" ")[0] || "Admin"} 👋
+              Welcome, {user?.fullName?.split(" ")[0] || "Admin"}
             </h1>
 
             <p className="text-gray-400 mt-2 text-sm">
@@ -445,7 +448,7 @@ function AdminDashboard({ user }) {
             {stats.map(({ title, value, icon: Icon, color, bg }) => (
               <div
                 key={title}
-                className="rounded-2xl bg-[#11111f] border border-white/10 p-5"
+                className="rounded-2xl bg-[#11111f] border border-white/10 p-5 shadow-lg shadow-black/10"
               >
                 <div className={`w-11 h-11 rounded-xl ${bg} ${color} flex items-center justify-center mb-4`}>
                   <Icon size={21} />
@@ -459,10 +462,10 @@ function AdminDashboard({ user }) {
             ))}
           </section>
 
-          <section className="mb-8 rounded-2xl border border-purple-500/20 bg-[#11111f] p-5 md:p-6">
-            <h2 className="flex items-center gap-2 text-xl font-bold"><Sparkles className="text-purple-400"/> AI Learning Generator</h2>
+          <section id="generator" className="scroll-mt-24 mb-8 rounded-2xl border border-purple-500/20 bg-[#11111f] p-5 md:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-xl font-bold"><Sparkles className="text-purple-400"/> AI Learning Generator</h2><button type="button" disabled={generating} aria-expanded={generatorOpen} onClick={() => setGeneratorOpen(v => !v)} className="rounded-lg border border-white/10 px-3 py-2 text-sm text-gray-300">{generatorOpen ? "Collapse" : "Expand"}</button></div>
             <p className="text-sm text-gray-400 mt-2">Generate course, module and lesson outlines as drafts. Review before publishing.</p>
-            <form onSubmit={generateOutline} className="mt-5 space-y-4">
+            <form hidden={!generatorOpen} onSubmit={generateOutline} className="mt-5 space-y-4">
               <fieldset disabled={generating} className="grid sm:grid-cols-2 gap-4 disabled:opacity-60">
                 <label className={labelClass}>Programming Language<input required maxLength={80} className={inputClass} placeholder="e.g. CSS, Java" value={aiForm.programmingLanguage} onChange={e => setAiForm(old => ({...old, programmingLanguage:e.target.value}))}/></label>
                 <label className={labelClass}>Category<select className={inputClass} value={aiForm.category} onChange={e => setAiForm(old => ({...old, category:e.target.value}))}>{["Programming","Web Development","Mobile Development","Database","Data Science","Artificial Intelligence","Other"].map(v => <option key={v}>{v}</option>)}</select></label>
@@ -475,7 +478,7 @@ function AdminDashboard({ user }) {
             </form>
           </section>
           {/* Course Management */}
-          <section>
+          <section id="courses" className="scroll-mt-24">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-xl font-bold">
@@ -496,7 +499,7 @@ function AdminDashboard({ user }) {
                 </button>
 
                 <button
-                  onClick={openAddForm}
+                  disabled={generating || loading} onClick={openAddForm}
                   className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-sm font-medium transition"
                 >
                   <Plus size={17} />
@@ -505,32 +508,37 @@ function AdminDashboard({ user }) {
               </div>
             </div>
 
-            {loading ? (
-              <div className="p-10 text-center text-gray-400">
-                Loading courses...
+            <div className="mb-5 rounded-2xl border border-white/10 bg-[#11111f] p-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <input aria-label="Search courses" placeholder="Search courses or languages..." className={inputClass} value={search} onChange={e=>setSearch(e.target.value)}/>
+                <select aria-label="Category" className={inputClass} value={category} onChange={e=>setCategory(e.target.value)}><option value="ALL">All categories</option>{categories.map(c=><option key={c}>{c}</option>)}</select>
+                <select aria-label="Publication status" className={inputClass} value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">All statuses</option><option value="PUBLISHED">Published</option><option value="DRAFT">Draft</option></select>
+                <select aria-label="Sort courses" className={inputClass} value={sort} onChange={e=>setSort(e.target.value)}><option value="TITLE">Title A–Z</option><option value="LESSONS">Most lessons</option><option value="DRAFT">Drafts first</option></select>
               </div>
-            ) : courses.length === 0 ? (
+              <div className="mt-3 flex justify-between items-center text-xs text-gray-400"><span>{loading ? "Loading courses…" : `${visibleCourses.length} of ${courses.length} courses · ${courses.length-publishedCourses} drafts overall`}</span><button type="button" className="text-purple-300 hover:underline" onClick={()=>{setSearch("");setCategory("ALL");setStatus("ALL");setSort("TITLE");}}>Reset filters</button></div>
+            </div>
+            {loading ? (
+              <div role="status" aria-label="Loading courses" className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">{[1,2,3].map(i=><div key={i} className="h-72 animate-pulse rounded-2xl bg-[#11111f] border border-white/10"/>)}</div>
+            ) : visibleCourses.length === 0 ? (
               <div className="p-10 text-center rounded-2xl border border-white/10 bg-[#11111f]">
                 <BookOpen
                   className="mx-auto mb-3 text-gray-500"
                   size={32}
                 />
                 <p className="text-gray-400">
-                  No courses found.
+                  {courses.length ? "No courses match your filters." : "No courses found."}
                 </p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {courses.map((course) => (
+                {visibleCourses.map((course) => (
                   <div
                     key={course.id}
-                    className="rounded-2xl border border-white/10 bg-[#11111f] p-5 hover:border-purple-500/30 transition"
+                    className="rounded-2xl border border-white/10 bg-[#11111f] p-5 flex flex-col hover:border-purple-500/40 transition shadow-lg shadow-black/10"
                   >
                     <div className="flex items-start justify-between mb-5">
-                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-2xl">
-                        {course.programmingLanguage === "HTML"
-                          ? "🌐"
-                          : "📚"}
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-600/30 to-blue-600/20 border border-purple-400/20 text-purple-200 flex items-center justify-center text-lg font-bold">
+                        {languageLabel(course.programmingLanguage)}
                       </div>
 
                       <span
@@ -548,7 +556,7 @@ function AdminDashboard({ user }) {
                       {course.title}
                     </h3>
 
-                    <p className="text-sm text-gray-400 mt-2 line-clamp-3">
+                    <p className="text-sm text-gray-400 mt-2 line-clamp-3 min-h-[60px]">
                       {course.description}
                     </p>
 
@@ -566,7 +574,7 @@ function AdminDashboard({ user }) {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mt-5 py-4 border-y border-white/10">
+                    <div className="grid grid-cols-3 gap-2 mt-auto pt-5 pb-4 border-y border-white/10">
                       <div className="text-center">
                         <p className="font-bold">
                           {course.totalModules ?? 0}
@@ -603,7 +611,7 @@ function AdminDashboard({ user }) {
                     <button
                       type="button"
                       disabled={generating} onClick={() => setContentCourse(course)}
-                      className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-3 text-sm font-medium transition"
+                      className="mt-5 w-full disabled:opacity-50 flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-3 text-sm font-medium transition"
                     >
                       <Layers3 size={17} /> Manage Content
                     </button>
@@ -611,14 +619,14 @@ function AdminDashboard({ user }) {
                     <div className="flex gap-3 mt-5 pt-4 border-t border-white/10">
                       <button
                         type="button"
-                        onClick={() => openEditForm(course)}
+                        disabled={generating} onClick={() => openEditForm(course)}
                         className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2.5 text-sm text-purple-300 hover:bg-purple-500/20 transition"
                       >
                         <Pencil size={16} /> Edit
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
+                        disabled={generating} onClick={() => {
                           setDeleteError("");
                           setDeletingCourse(course);
                         }}

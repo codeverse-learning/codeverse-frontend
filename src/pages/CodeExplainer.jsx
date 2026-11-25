@@ -169,9 +169,12 @@ function VoicePlayer({ text, title = "Listen to explanation" }) {
   }, [supported]);
 
   useEffect(() => {
+    setSpeaking(false);
+    setPaused(false);
+    setNotice("");
     return () => {
-      if (supported) window.speechSynthesis.cancel();
       utteranceRef.current = null;
+      if (supported) window.speechSynthesis.cancel();
     };
   }, [supported, text]);
 
@@ -328,8 +331,8 @@ function GuidedExplanation({ result, onCopy, copied }) {
   const [completed, setCompleted] = useState([]);
   const [showAll, setShowAll] = useState(false);
   const sections = parseExplanationSections(result.explanation);
-  const current = sections[Math.min(active, sections.length - 1)];
-  const progress = Math.round((completed.length / sections.length) * 100);
+  const current = sections[Math.min(active, sections.length - 1)] || { title: "Explanation", content: result.explanation };
+  const progress = sections.length ? Math.round((completed.length / sections.length) * 100) : 0;
   const icons = [Sparkles, BrainCircuit, Code2, Play, Lightbulb, BookOpen, Trophy];
   const goTo = (index) => {
     setActive(Math.max(0, Math.min(index, sections.length - 1)));
@@ -416,6 +419,9 @@ function CodeExplainer() {
   const [copied, setCopied] = useState(false);
   const [resultCopied, setResultCopied] = useState(false);
 
+  const busy = loading || chapterLoading;
+  const extensions = { JavaScript: "js", Python: "py", Java: "java", HTML: "html", CSS: "css", C: "c", "C++": "cpp", "C#": "cs", TypeScript: "ts", PHP: "php", SQL: "sql", Dart: "dart" };
+
   const clearOutputs = () => {
     setResult(null);
     setLesson(null);
@@ -433,6 +439,7 @@ function CodeExplainer() {
   };
 
   const selectMode = (nextMode) => {
+    if (busy) return;
     setMode(nextMode);
     clearOutputs();
     requestAnimationFrame(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -441,11 +448,13 @@ function CodeExplainer() {
   const selectVisualStudio = () => selectMode("visual");
 
   const handleExample = () => {
+    if (busy) return;
     setCode(EXAMPLES[language] || "");
     clearOutputs();
   };
 
   const handleClear = () => {
+    if (busy) return;
     setCode("");
     clearOutputs();
   };
@@ -592,6 +601,7 @@ function CodeExplainer() {
 
 
   const handleGenerate = async () => {
+    if (busy) return;
     if (!validateCode()) return;
     clearOutputs();
     setLoading(true);
@@ -622,7 +632,7 @@ function CodeExplainer() {
         setResult(data);
         window.setTimeout(() => document.getElementById("learning-results")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       } else if (mode === "tutor") {
-        if (!data || !Array.isArray(data.steps) || data.steps.length < 3) {
+        if (!data || !Array.isArray(data.steps) || data.steps.length < 3 || !data.steps.every(step => step?.question && Array.isArray(step.question.options) && step.question.options.length >= 2 && Number.isInteger(step.question.correctAnswerIndex) && step.question.correctAnswerIndex >= 0 && step.question.correctAnswerIndex < step.question.options.length)) {
           throw new Error("INVALID_LESSON");
         }
         setLesson(data);
@@ -668,7 +678,7 @@ function CodeExplainer() {
             : "AI service is temporarily unavailable. Please try later or open the Demo Lesson."
         );
       } else if (!error.response) {
-        setMessage("Cannot reach the CODEVERSE backend. Check that Spring Boot is running on port 8080.");
+        setMessage("Cannot reach the CODEVERSE backend. Check your connection and try again.");
       } else {
         setMessage("Unable to generate content right now. Please try again or use the demo.");
       }
@@ -678,6 +688,7 @@ function CodeExplainer() {
   };
 
   const loadDemo = () => {
+    if (busy) return;
     setMode("tutor");
     setLanguage("JavaScript");
     setExplanationLevel("Beginner");
@@ -710,12 +721,12 @@ function CodeExplainer() {
 
   return (
     <div className="min-h-screen bg-[#080812] text-white">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0c0c18] shadow-lg shadow-black/20">
-        <div className="max-w-7xl mx-auto px-5 md:px-8 py-5 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0c0c18]/95 backdrop-blur shadow-lg shadow-black/20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 md:px-8 py-4 flex items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <button onClick={() => navigate("/dashboard")} className="p-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5" title="Back to Dashboard"><ArrowLeft size={19} /></button>
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center"><BrainCircuit size={23} /></div>
-            <div><h1 className="text-lg md:text-xl font-bold">AI Code Explainer & Tutor</h1><p className="text-xs text-gray-500">CODEVERSE Learning Platform</p></div>
+            <button onClick={() => navigate("/dashboard")} className="p-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5" aria-label="Back to Dashboard" title="Back to Dashboard"><ArrowLeft size={19} /></button>
+            <div className="hidden sm:flex shrink-0 w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center"><BrainCircuit size={23} /></div>
+            <div><h1 className="text-sm sm:text-lg md:text-xl font-bold">AI Code Explainer & Tutor</h1><p className="text-xs text-gray-500">CODEVERSE Learning Platform</p></div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <button
@@ -733,7 +744,7 @@ function CodeExplainer() {
       </header>
 
       <main className="max-w-7xl mx-auto px-5 md:px-8 py-10">
-        <section className="mb-8">
+        <section className="mb-8 rounded-3xl border border-purple-500/20 bg-gradient-to-br from-[#21163d] via-[#141326] to-[#10172b] p-6 md:p-9">
           <div className="inline-flex items-center gap-2 text-purple-400 text-sm mb-4"><Sparkles size={16} /> Learn Programming Smarter</div>
           <h2 className="text-3xl md:text-4xl font-bold">Understand Any Code with <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">AI</span></h2>
           <p className="text-base text-gray-300 mt-4 max-w-2xl leading-8">Explore code with friendly explanations, listen to your AI tutor, and learn by doing with mini challenges and quizzes.</p>
@@ -749,7 +760,7 @@ function CodeExplainer() {
             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-gray-400">3 learning experiences</span>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <button type="button" disabled={loading} onClick={() => selectMode("explain")}
+            <button type="button" disabled={busy} onClick={() => selectMode("explain")}
               aria-pressed={mode === "explain"}
               className={`group rounded-2xl border p-5 text-left transition-all hover:-translate-y-0.5 disabled:opacity-60 ${mode === "explain" ? "border-purple-400/60 bg-gradient-to-br from-purple-500/20 to-[#141326] shadow-lg shadow-purple-950/20" : "border-white/10 bg-[#11111f] hover:border-purple-500/40"}`}>
               <div className="mb-5 flex items-center justify-between"><span className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/15 text-purple-300"><Code2 size={23}/></span>{mode === "explain" ? <span className="flex items-center gap-1 text-xs font-semibold text-purple-300"><Check size={14}/> Selected</span> : <ArrowRight size={18} className="text-gray-500 group-hover:text-purple-300"/>}</div>
@@ -757,7 +768,7 @@ function CodeExplainer() {
               <p className="mt-2 min-h-[48px] text-sm leading-6 text-gray-400">Understand your code with guided, line-by-line explanations and improvements.</p>
               <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-purple-300">{mode === "explain" ? "Ready to explain" : "Choose tool"} <ChevronRight size={16}/></span>
             </button>
-            <button type="button" disabled={loading} onClick={() => selectMode("tutor")}
+            <button type="button" disabled={busy} onClick={() => selectMode("tutor")}
               aria-pressed={mode === "tutor"}
               className={`group rounded-2xl border p-5 text-left transition-all hover:-translate-y-0.5 disabled:opacity-60 ${mode === "tutor" ? "border-blue-400/60 bg-gradient-to-br from-blue-500/20 to-[#141326] shadow-lg shadow-blue-950/20" : "border-white/10 bg-[#11111f] hover:border-blue-500/40"}`}>
               <div className="mb-5 flex items-center justify-between"><span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300"><GraduationCap size={23}/></span>{mode === "tutor" ? <span className="flex items-center gap-1 text-xs font-semibold text-blue-300"><Check size={14}/> Selected</span> : <ArrowRight size={18} className="text-gray-500 group-hover:text-blue-300"/>}</div>
@@ -765,7 +776,7 @@ function CodeExplainer() {
               <p className="mt-2 min-h-[48px] text-sm leading-6 text-gray-400">Generate an interactive lesson, answer quizzes, and track your score.</p>
               <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-300">{mode === "tutor" ? "Ready to generate" : "Choose tool"} <ChevronRight size={16}/></span>
             </button>
-            <button type="button" disabled={loading} onClick={selectVisualStudio} aria-pressed={mode === "visual"}
+            <button type="button" disabled={busy} onClick={selectVisualStudio} aria-pressed={mode === "visual"}
               className={`group rounded-2xl border p-5 text-left transition-all hover:-translate-y-0.5 disabled:opacity-60 ${mode === "visual" ? "border-fuchsia-400/60 bg-gradient-to-br from-fuchsia-500/20 to-[#141326]" : "border-white/10 bg-[#11111f] hover:border-fuchsia-500/50 hover:bg-fuchsia-500/5"}`}>
               <div className="mb-5 flex items-center justify-between"><span className="flex h-12 w-12 items-center justify-center rounded-xl bg-fuchsia-500/15 text-fuchsia-300"><Film size={23}/></span><ArrowRight size={18} className="text-gray-500 group-hover:text-fuchsia-300"/></div>
               <h4 className="text-lg font-semibold">Visual Learning Studio</h4>
@@ -775,7 +786,7 @@ function CodeExplainer() {
           </div>
         </section>
 
-        <div ref={editorRef} className="mb-5 scroll-mt-6 rounded-2xl border border-white/10 bg-gradient-to-r from-[#17142b] to-[#10172b] px-5 py-4 md:px-6">
+        <div ref={editorRef} className="mb-5 scroll-mt-28 rounded-2xl border border-white/10 bg-gradient-to-r from-[#17142b] to-[#10172b] px-5 py-4 md:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               {mode === "tutor" ? <GraduationCap size={23} className="text-blue-300"/> : mode === "visual" ? <Film size={23} className="text-fuchsia-300"/> : <BrainCircuit size={23} className="text-purple-300"/>}
@@ -785,24 +796,27 @@ function CodeExplainer() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_320px] gap-6">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6">
           <section className="rounded-2xl border border-white/10 bg-[#11111f] overflow-hidden">
             <div className="p-5 md:p-6 border-b border-white/10">
               <div className="flex items-center gap-3 mb-5"><div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center"><FileCode2 size={21} className="text-purple-400" /></div><div><h3 className="font-semibold text-lg">Your Code</h3><p className="text-xs text-gray-500">Paste or write code to get started</p></div></div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <div><label className="block text-xs text-gray-400 mb-2">Programming Language</label><div className="relative"><select value={language} onChange={(e) => { setLanguage(e.target.value); clearOutputs(); }} className="w-full appearance-none bg-[#0b0b16] border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-white focus:outline-none focus:border-purple-500">{LANGUAGES.map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown size={16} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" /></div></div>
-                <div><label className="block text-xs text-gray-400 mb-2">Explanation Level</label><div className="relative"><select value={explanationLevel} onChange={(e) => { setExplanationLevel(e.target.value); clearOutputs(); }} className="w-full appearance-none bg-[#0b0b16] border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-white focus:outline-none focus:border-purple-500"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select><ChevronDown size={16} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" /></div></div>
+                <div><label htmlFor="code-language" className="block text-xs text-gray-400 mb-2">Programming Language</label><div className="relative"><select id="code-language" disabled={busy} value={language} onChange={(e) => { setLanguage(e.target.value); clearOutputs(); }} className="w-full appearance-none bg-[#0b0b16] border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-white focus:outline-none focus:border-purple-500">{LANGUAGES.map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown size={16} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" /></div></div>
+                <div><label htmlFor="explanation-level" className="block text-xs text-gray-400 mb-2">Explanation Level</label><div className="relative"><select id="explanation-level" disabled={busy} value={explanationLevel} onChange={(e) => { setExplanationLevel(e.target.value); clearOutputs(); }} className="w-full appearance-none bg-[#0b0b16] border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-white focus:outline-none focus:border-purple-500"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select><ChevronDown size={16} className="absolute right-3 top-3.5 text-gray-500 pointer-events-none" /></div></div>
               </div>
             </div>
             <div className="flex items-center justify-between gap-3 px-5 py-3 bg-[#0b0b16] border-b border-white/10">
-              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500" /><span className="w-3 h-3 rounded-full bg-yellow-500" /><span className="w-3 h-3 rounded-full bg-green-500" /><span className="ml-3 text-xs text-gray-500">code.{language.toLowerCase()}</span></div>
-              <div className="flex items-center gap-3"><button onClick={() => copyText(code, setCopied)} disabled={!code} className="text-gray-400 hover:text-white disabled:opacity-40" title="Copy Code">{copied ? <Check size={17} /> : <Clipboard size={17} />}</button><button onClick={handleClear} disabled={!code} className="text-gray-400 hover:text-white disabled:opacity-40" title="Clear Code"><RotateCcw size={17} /></button></div>
+              <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500" /><span className="w-3 h-3 rounded-full bg-yellow-500" /><span className="w-3 h-3 rounded-full bg-green-500" /><span className="ml-3 text-xs text-gray-500">code.{extensions[language]}</span></div>
+              <div className="flex items-center gap-3"><button onClick={() => copyText(code, setCopied)} disabled={!code} className="text-gray-400 hover:text-white disabled:opacity-40" aria-label="Copy Code" title="Copy Code">{copied ? <Check size={17} /> : <Clipboard size={17} />}</button><button onClick={handleClear} disabled={busy || !code} className="text-gray-400 hover:text-white disabled:opacity-40" aria-label="Clear Code" title="Clear Code"><RotateCcw size={17} /></button></div>
             </div>
-            <textarea value={code} onChange={(e) => { setCode(e.target.value); clearOutputs(); }} placeholder="// Paste your code here..." spellCheck={false} className="w-full min-h-[360px] md:min-h-[430px] resize-y bg-[#0b0b16] text-gray-200 font-mono text-sm leading-7 p-6 outline-none placeholder:text-gray-600" />
-            <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-t border-white/10"><div className="flex gap-4 text-xs text-gray-500"><span>{code ? code.split("\n").length : 0} Lines</span><span>{code.length} Characters</span></div><button onClick={handleExample} className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-2"><Code2 size={16} /> Load Example</button></div>
+            <textarea aria-label="Source code" readOnly={busy} value={code} onChange={(e) => { setCode(e.target.value); clearOutputs(); }} placeholder="// Paste your code here..." spellCheck={false} className="w-full min-h-[360px] md:min-h-[430px] resize-y bg-[#0b0b16] text-gray-200 font-mono text-sm leading-7 p-6 outline-none placeholder:text-gray-600" />
+            <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4 border-t border-white/10"><div className="flex gap-4 text-xs text-gray-500"><span>{code ? code.split("\n").length : 0} Lines</span><span>{code.length.toLocaleString()} / 20,000 characters</span></div><button onClick={handleExample} disabled={busy} className="text-sm text-purple-400 hover:text-purple-300 flex items-center gap-2"><Code2 size={16} /> Load Example</button></div>
             <div className="p-5 md:p-6 border-t border-white/10 space-y-3">
-              <button onClick={handleGenerate} disabled={loading || chapterLoading || !code.trim()} className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-4 font-semibold hover:from-purple-500 hover:to-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed">{loading || chapterLoading ? <LoaderCircle size={20} className="animate-spin" /> : <WandSparkles size={20} />}{loading || chapterLoading ? "Generating..." : mode === "explain" ? "Explain My Code" : mode === "tutor" ? "Generate Interactive Lesson" : "Generate Visual Lesson"}</button>
-              {mode === "tutor" && <button onClick={loadDemo} disabled={loading} className="w-full flex items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 py-3 text-sm font-medium text-purple-200 hover:bg-purple-500/20 disabled:opacity-40"><Play size={16} /> Try Demo Lesson (No API Required)</button>}
+              <button onClick={handleGenerate} disabled={busy || !code.trim() || code.length > 20000} className="w-full flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-4 font-semibold hover:from-purple-500 hover:to-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed">{loading || chapterLoading ? <LoaderCircle size={20} className="animate-spin" /> : <WandSparkles size={20} />}{loading || chapterLoading ? "Generating..." : mode === "explain" ? "Explain My Code" : mode === "tutor" ? "Generate Interactive Lesson" : "Generate Visual Lesson"}</button>
+              {mode === "tutor" && <button onClick={loadDemo} disabled={busy} className="w-full flex items-center justify-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 py-3 text-sm font-medium text-purple-200 hover:bg-purple-500/20 disabled:opacity-40"><Play size={16} /> Try Demo Lesson (No API Required)</button>}
+              {code.length > 20000 && <p role="alert" className="text-sm text-amber-300">Please reduce your code to 20,000 characters or fewer.</p>}
+              {busy && <p role="status" className="text-sm text-purple-200">AI is preparing your learning content. Keep this page open. Editing is temporarily paused.</p>}
+              <p className="text-xs leading-5 text-gray-400">Your code is sent to the AI service for analysis. Remove passwords, API keys and private information before generating. AI explanations may contain mistakes.</p>
               {message && <p role="alert" className="text-sm text-purple-200 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">{message}</p>}
             </div>
           </section>
@@ -810,12 +824,12 @@ function CodeExplainer() {
           <aside className="space-y-5">
             <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-blue-500/5 p-6"><Sparkles size={26} className="text-purple-400 mb-4" /><h3 className="text-lg font-bold">Your AI Coding Assistant</h3><p className="text-sm text-gray-400 mt-3 leading-7">Understand complex code through explanations, interactive learning, and quick knowledge checks.</p></div>
             <div className="rounded-2xl border border-white/10 bg-[#11111f] p-6"><h3 className="font-semibold mb-5">What You'll Learn</h3><div className="space-y-5">{[{ icon: BookOpen, title: "Code Explanation", description: "Understand what your code does." }, { icon: Code2, title: "Line-by-Line Analysis", description: "Learn the purpose of each line." }, { icon: Lightbulb, title: "Code Improvements", description: "Discover better coding practices." }, { icon: BrainCircuit, title: "Interactive Tutor", description: "Practice concepts with quizzes." }].map(({ icon: Icon, title, description }) => <div key={title} className="flex gap-3"><div className="w-9 h-9 shrink-0 rounded-lg bg-purple-500/10 flex items-center justify-center"><Icon size={18} className="text-purple-400" /></div><div><h4 className="text-sm font-medium">{title}</h4><p className="text-xs text-gray-500 mt-1 leading-5">{description}</p></div></div>)}</div></div>
-            <button type="button" onClick={selectVisualStudio} className="w-full rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-5 text-left transition hover:border-fuchsia-400/50 hover:bg-fuchsia-500/10"><div className="flex items-center gap-3"><Film size={22} className="text-fuchsia-300"/><span className="font-semibold">Create a Visual Lesson</span><ArrowRight size={17} className="ml-auto text-fuchsia-300"/></div><p className="mt-2 text-sm leading-6 text-gray-400">See animated code walkthroughs with optional narration.</p></button>
+            <button type="button" onClick={selectVisualStudio} disabled={busy} className="w-full rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 p-5 text-left transition hover:border-fuchsia-400/50 hover:bg-fuchsia-500/10"><div className="flex items-center gap-3"><Film size={22} className="text-fuchsia-300"/><span className="font-semibold">Create a Visual Lesson</span><ArrowRight size={17} className="ml-auto text-fuchsia-300"/></div><p className="mt-2 text-sm leading-6 text-gray-400">See animated code walkthroughs with optional narration.</p></button>
             <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5"><Lightbulb size={21} className="text-blue-400 mb-3" /><p className="text-sm font-semibold">Learning Tip</p><p className="text-xs text-gray-400 mt-2 leading-6">Start with a small code snippet. Understanding simple examples first makes complex programs easier to learn.</p></div>
           </aside>
         </div>
 
-        {(result?.explanation || lesson || visualLesson) && <div id="learning-results" className="mt-8 flex items-center gap-2 text-sm text-purple-300"><CircleCheck size={18}/> Your learning content is ready below</div>}
+        {(result?.explanation || lesson || visualLesson) && <div id="learning-results" className="scroll-mt-28 mt-8 flex items-center gap-2 text-sm text-purple-300"><CircleCheck size={18}/> Your learning content is ready below</div>}
 
         {chapterOutline && mode === "visual" && (
           <section className="mt-8 rounded-2xl border border-fuchsia-500/20 bg-[#11111f] p-5 md:p-7" aria-label="Visual learning chapters">
@@ -829,7 +843,7 @@ function CodeExplainer() {
             <div className="mt-4 h-2 rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${completedChapters.length / chapterOutline.chapters.length * 100}%` }} /></div>
             <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {chapterOutline.chapters.map((chapter) => (
-                <button key={chapter.index} type="button" disabled={chapterLoading} onClick={() => loadChapter(chapter.index)}
+                <button key={chapter.index} type="button" disabled={busy} aria-current={activeChapter === chapter.index ? "step" : undefined} onClick={() => loadChapter(chapter.index)}
                   className={`rounded-xl border p-4 text-left transition disabled:opacity-50 ${activeChapter === chapter.index ? "border-fuchsia-400/60 bg-fuchsia-500/15" : "border-white/10 bg-[#0b0b16] hover:border-fuchsia-400/40"}`}>
                   <span className="flex items-center justify-between gap-2 text-sm font-semibold text-white">
                     Chapter {chapter.index + 1}
@@ -839,6 +853,7 @@ function CodeExplainer() {
                 </button>
               ))}
             </div>
+            {!chapterLoading && !visualLesson && message && <p role="alert" className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">{message} Select the chapter to retry.</p>}
             {chapterLoading && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-fuchsia-300"><LoaderCircle size={17} className="animate-spin" /> Generating chapter {activeChapter + 1}...</p>}
           </section>
         )}

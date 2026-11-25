@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  Search,
+  Copy,
   ArrowLeft,
   ArrowRight,
   BookOpen,
@@ -18,9 +20,10 @@ import {
   X,
 } from "lucide-react";
 
+import ReactMarkdown from "react-markdown";
 import api from "../services/api";
 
-// Remembers the last opened lesson on this browser, separately for each user and study pack.
+// Remembers the last opened lesson on this browser, separately for each user and course.
 function getResumeKey(courseId) {
   try {
     const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -31,7 +34,7 @@ function getResumeKey(courseId) {
   }
 }
 
-// Stores the most recently visited study pack for the Study Packs landing page.
+// Stores the most recently visited course for the Courses landing page.
 function rememberRecentPack(courseId) {
   try {
     const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -40,6 +43,15 @@ function rememberRecentPack(courseId) {
   } catch {
     // Learning remains available when storage is disabled.
   }
+}
+
+function getPracticeTarget(language) {
+  const key = String(language || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const web = { html: "web", css: "web", javascript: "web", js: "web", typescript: "typescript", ts: "typescript", react: "react", "react.js": "react", reactjs: "react", flutter: "flutter", vue: "vue", svelte: "svelte", angular: "angular", "react native": "react-native", "next.js": "nextjs" };
+  const trace = { python: "python", java: "java", c: "c", "c++": "cpp", cpp: "cpp", "c#": "csharp", csharp: "csharp", php: "php", dart: "dart" };
+  if (Object.hasOwn(web, key)) return { path: `/live-playground?environment=${web[key]}`, label: "Open Playground", trace: false };
+  if (Object.hasOwn(trace, key)) return { path: `/code-time-machine?language=${trace[key]}`, label: "Practice with Code Time Machine", trace: true };
+  return null;
 }
 
 function CourseLearning() {
@@ -54,6 +66,12 @@ function CourseLearning() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [copyNotice, setCopyNotice] = useState("");
+  const copyExample = async (example) => {
+    try { await navigator.clipboard.writeText(example); setCopyNotice("Code copied."); }
+    catch { setCopyNotice("Unable to copy. Select the code manually."); }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +95,7 @@ function CourseLearning() {
         }
 
         if (!currentCourse.free) {
-          throw new Error("This study pack is not available for free.");
+          throw new Error("This course is not available for free.");
         }
 
         const modulesResponse = await api.get(
@@ -132,7 +150,10 @@ function CourseLearning() {
         );
         const initialLesson = resumedLesson || allLessons[0];
         setSelectedLessonId(initialLesson?.id ?? null);
-        if (initialLesson) rememberRecentPack(courseId);
+        if (initialLesson) {
+          rememberRecentPack(courseId);
+          try { localStorage.setItem(getResumeKey(courseId), initialLesson.id); } catch { /* Storage optional */ }
+        }
 
         const initialModuleId = initialLesson?.moduleId || courseModules[0]?.id;
         setExpandedModules(initialModuleId ? { [initialModuleId]: true } : {});
@@ -141,7 +162,7 @@ function CourseLearning() {
           setError(
             err.response?.data?.message ||
               err.message ||
-              "Unable to load this study pack."
+              "Unable to load this course."
           );
         }
       } finally {
@@ -173,6 +194,7 @@ function CourseLearning() {
   };
 
   const selectLesson = (lesson) => {
+    setCopyNotice("");
     setSelectedLessonId(lesson.id);
     rememberLesson(lesson);
     setSidebarOpen(false);
@@ -183,6 +205,7 @@ function CourseLearning() {
     if (index < 0 || index >= lessons.length) return;
 
     const lesson = lessons[index];
+    setCopyNotice("");
     setSelectedLessonId(lesson.id);
     rememberLesson(lesson);
     setExpandedModules((previous) => ({
@@ -207,7 +230,7 @@ function CourseLearning() {
           size={38}
           className="animate-spin text-purple-400"
         />
-        <p className="text-gray-400">Loading your study pack...</p>
+        <p className="text-gray-400">Loading your course...</p>
       </div>
     );
   }
@@ -221,25 +244,27 @@ function CourseLearning() {
             className="mx-auto mb-4 text-red-400"
           />
           <h2 className="text-xl font-bold mb-3">
-            Unable to Open Study Pack
+            Unable to Open Course
           </h2>
           <p className="text-gray-400 text-sm mb-6">{error}</p>
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/learning-hub")}
             className="rounded-xl bg-purple-600 px-6 py-3 hover:bg-purple-500"
           >
-            Back to Dashboard
+            Back to Learning Hub
           </button>
         </div>
       </div>
     );
   }
 
+  const practice = getPracticeTarget(course?.programmingLanguage);
+
   const sidebar = (
     <div className="flex flex-col h-full">
       <div className="p-5 border-b border-white/10">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-bold text-lg">Study Pack Content</h2>
+          <h2 className="font-bold text-lg">Course Curriculum</h2>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-400"
@@ -254,6 +279,11 @@ function CourseLearning() {
         </p>
       </div>
 
+      <div className="p-3 border-b border-white/10 space-y-3">
+        <div className="relative"><Search size={16} className="absolute left-3 top-3 text-gray-400"/><input aria-label="Search lessons" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search lessons..." className="w-full rounded-xl bg-[#11111f] border border-white/10 pl-9 pr-3 py-2.5 text-sm outline-none focus:border-purple-500"/></div>
+        <div className="flex gap-2 text-xs"><button onClick={() => {setQuery(""); setExpandedModules(Object.fromEntries(modules.map(m => [m.id,true])));}} className="flex-1 rounded-lg border border-white/10 p-2 hover:bg-white/5">Expand all</button><button onClick={() => {setQuery(""); setExpandedModules({});}} className="flex-1 rounded-lg border border-white/10 p-2 hover:bg-white/5">Collapse all</button></div>
+        <p className="text-xs text-gray-400">{query.trim() ? `${lessons.filter(l => l.title?.toLowerCase().includes(query.trim().toLowerCase())).length} matching lessons` : selectedIndex >= 0 ? `Current lesson ${selectedIndex+1} of ${lessons.length}` : "No lesson selected"}</p>
+      </div>
       <div className="flex-1 overflow-y-auto p-3">
         {modules.length === 0 && (
           <p className="p-4 text-sm text-gray-500">
@@ -263,15 +293,17 @@ function CourseLearning() {
 
         {modules.map((module, moduleIndex) => {
           const moduleLessons = lessons.filter(
-            (lesson) => lesson.moduleId === module.id
+            (lesson) => lesson.moduleId === module.id && (!query.trim() || lesson.title?.toLowerCase().includes(query.trim().toLowerCase()))
           );
 
-          const expanded = Boolean(expandedModules[module.id]);
+          if (query.trim() && !moduleLessons.length) return null;
+          const expanded = Boolean(query.trim() || expandedModules[module.id]);
 
           return (
             <div key={module.id} className="mb-2">
               <button
-                onClick={() => toggleModule(module.id)}
+                aria-expanded={expanded}
+                onClick={() => { if (query.trim()) {setQuery(""); setExpandedModules(old => ({...old,[module.id]:false}));} else toggleModule(module.id); }}
                 className="w-full flex items-center justify-between gap-3 rounded-xl p-3 text-left hover:bg-white/5"
               >
                 <div className="flex items-start gap-3">
@@ -317,6 +349,7 @@ function CourseLearning() {
                     return (
                       <button
                         key={lesson.id}
+                        aria-current={active ? "step" : undefined}
                         onClick={() => selectLesson(lesson)}
                         className={`w-full flex items-start gap-3 rounded-xl p-3 text-left transition ${
                           active
@@ -355,12 +388,12 @@ function CourseLearning() {
   return (
     <div className="min-h-screen bg-[#080812] text-white">
       {/* Header */}
-      <header className="sticky top-0 z-30 h-18 min-h-18 border-b border-white/10 bg-[#0c0c18] px-4 md:px-7 py-4 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-30 h-[72px] border-b border-white/10 bg-[#0c0c18] px-4 md:px-7 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/learning-hub")}
             className="p-2 rounded-lg hover:bg-white/10 text-gray-400"
-            title="Back to Dashboard"
+            title="Back to Learning Hub"
           >
             <ArrowLeft size={20} />
           </button>
@@ -382,7 +415,7 @@ function CourseLearning() {
         <button
           onClick={() => setSidebarOpen(true)}
           className="lg:hidden p-2 rounded-lg border border-white/10"
-          aria-label="Open study pack content"
+          aria-label="Open course content"
         >
           <Menu size={21} />
         </button>
@@ -390,7 +423,7 @@ function CourseLearning() {
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-80 shrink-0 border-r border-white/10 bg-[#0c0c18] sticky top-[73px] h-[calc(100vh-73px)]">
+        <aside className="hidden lg:block w-80 shrink-0 border-r border-white/10 bg-[#0c0c18] sticky top-[72px] h-[calc(100dvh-72px)]">
           {sidebar}
         </aside>
 
@@ -400,7 +433,7 @@ function CourseLearning() {
             <button
               className="absolute inset-0 bg-black/70 w-full"
               onClick={() => setSidebarOpen(false)}
-              aria-label="Close study pack content"
+              aria-label="Close course content"
             />
 
             <aside className="absolute left-0 top-0 bottom-0 w-[min(85vw,340px)] bg-[#0c0c18] border-r border-white/10">
@@ -422,12 +455,13 @@ function CourseLearning() {
                   Lessons Coming Soon
                 </h2>
                 <p className="text-gray-400 text-sm mt-3">
-                  No published lessons are available for this study pack yet.
+                  No published lessons are available for this course yet.
                 </p>
               </div>
             ) : (
               <>
-                <div className="mb-8">
+                <div className="mb-8 rounded-3xl border border-purple-500/20 bg-gradient-to-br from-[#21163d] via-[#11111f] to-[#101c32] p-5 md:p-8">
+                  <p className="mb-4 text-xs font-medium text-purple-300">{modules.find(m => m.id === selectedLesson.moduleId)?.title || "Course lesson"}</p>
                   <div className="flex flex-wrap gap-3 mb-5">
                     <span className="inline-flex items-center gap-2 rounded-full bg-purple-500/10 px-3 py-1.5 text-xs text-purple-300">
                       <Layers3 size={14} />
@@ -469,12 +503,13 @@ function CourseLearning() {
                       Lesson Content
                     </h2>
 
-                    <div className="whitespace-pre-wrap break-words text-gray-300 leading-8 text-sm md:text-base">
-                      {selectedLesson.content}
+                    <div className="break-words text-gray-300 leading-8 text-sm md:text-base [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-lg [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_h1]:mt-6 [&_h2]:mt-6 [&_h3]:mt-4 [&_p]:my-3 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[#080812] [&_pre]:p-4 [&_code]:text-purple-200 [&_a]:text-blue-300 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-purple-500 [&_blockquote]:pl-4">
+                      <ReactMarkdown>{selectedLesson.content}</ReactMarkdown>
                     </div>
                   </section>
                 )}
 
+                {copyNotice && <p role="status" className="mb-3 text-sm text-purple-300">{copyNotice}</p>}
                 {/* Code Examples */}
                 {selectedLesson.codeExamples?.length > 0 && (
                   <section className="mb-6">
@@ -497,9 +532,7 @@ function CourseLearning() {
                               <span className="text-xs font-medium text-gray-400">
                                 Example {index + 1}
                               </span>
-                              <span className="text-xs text-purple-400">
-                                {course?.programmingLanguage || "Code"}
-                              </span>
+                              <div className="flex items-center gap-3"><span className="text-xs text-purple-400">{course?.programmingLanguage || "Code"}</span><button onClick={() => copyExample(example)} className="flex items-center gap-1 text-xs text-gray-300 hover:text-white"><Copy size={14}/> Copy</button></div>
                             </div>
 
                             <pre className="overflow-x-auto p-5 text-sm text-green-300 leading-7">
@@ -528,7 +561,7 @@ function CourseLearning() {
                         (exercise, index) => (
                           <div
                             key={index}
-                            className="rounded-xl border border-white/10 bg-[#11111f] p-4"
+                            className="rounded-xl border border-white/10 bg-[#11111f] p-5 border-l-2 border-l-purple-500"
                           >
                             <p className="text-xs text-purple-400 mb-2">
                               Exercise {index + 1}
@@ -539,6 +572,14 @@ function CourseLearning() {
                           </div>
                         )
                       )}
+                    </div>
+                    <div className="mt-6 rounded-2xl border border-purple-500/25 bg-[#21163d] p-5">
+                      <h3 className="font-semibold">Ready to practice?</h3>
+                      {practice ? <>
+                        <p className="mt-2 text-sm leading-6 text-gray-300">Write your own solution and inspect the output. {practice.trace ? "Run Code, then select End to view the final trace output." : "Use the selected environment to preview your code."} Your lesson stays open in this tab.</p>
+                        <a href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}${practice.path}`} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold hover:bg-purple-500"><Code2 size={17}/>{practice.label}<ArrowRight size={17}/></a>
+                        <p className="mt-3 text-xs text-gray-400">Output is not automatically graded. Some exercises may require tools or input not supported by this environment.</p>
+                      </> : <p className="mt-2 text-sm text-gray-400">A matching practice environment is not available for this course yet.</p>}
                     </div>
                   </section>
                 )}
@@ -598,11 +639,10 @@ function CourseLearning() {
                   </button>
 
                   <button
-                    onClick={() => goToLesson(selectedIndex + 1)}
-                    disabled={selectedIndex >= lessons.length - 1}
+                    onClick={() => selectedIndex >= lessons.length - 1 ? navigate("/learning-hub") : goToLesson(selectedIndex + 1)}
                     className="flex items-center gap-2 rounded-xl bg-purple-600 px-4 md:px-6 py-3 text-sm font-medium hover:bg-purple-500 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    Next Lesson
+                    {selectedIndex >= lessons.length - 1 ? "Learning Hub" : "Next Lesson"}
                     <ArrowRight size={17} />
                   </button>
                 </div>

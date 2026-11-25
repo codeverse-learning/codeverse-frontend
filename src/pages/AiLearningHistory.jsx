@@ -66,6 +66,11 @@ function AiLearningHistory() {
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
+  const [languageFilter, setLanguageFilter] = useState("ALL");
+  const [sortOrder, setSortOrder] = useState("NEWEST");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const languages = [...new Set(history.map(item => item.language).filter(Boolean))].sort();
+  const clearFilters = () => { setSearch(""); setFilter("ALL"); setLanguageFilter("ALL"); setSortOrder("NEWEST"); };
 
   const [selectedHistory, setSelectedHistory] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -111,6 +116,17 @@ function AiLearningHistory() {
     fetchHistory();
   }, []);
 
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") {
+        if (confirmDelete) setConfirmDelete(null);
+        else setSelectedHistory(null);
+      }
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [confirmDelete]);
+
   const filteredHistory = history.filter((item) => {
     const matchesFilter =
       filter === "ALL" || item.learningMode === filter;
@@ -123,15 +139,15 @@ function AiLearningHistory() {
       (item.language || "").toLowerCase().includes(query) ||
       (item.code || "").toLowerCase().includes(query);
 
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesSearch && (languageFilter === "ALL" || item.language === languageFilter);
+  }).sort((a, b) => {
+    const difference = (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0);
+    return sortOrder === "NEWEST" ? difference : -difference;
   });
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this learning history?"
-    );
-
-    if (!confirmed) return;
+    if (deletingId || deletingAll || loading || refreshing) return;
+    setConfirmDelete(null);
 
     try {
       setDeletingId(id);
@@ -158,10 +174,8 @@ function AiLearningHistory() {
   const handleDeleteAll = async () => {
     if (deletingAll || deletingId || history.length === 0) return;
 
-    const confirmed = window.confirm(
-      `Permanently delete all ${history.length} saved learning sessions? This cannot be undone.`
-    );
-    if (!confirmed) return;
+    if (loading || refreshing) return;
+    setConfirmDelete(null);
 
     setDeletingAll(true);
     setError("");
@@ -195,6 +209,7 @@ function AiLearningHistory() {
   };
 
   const copyCode = async (code) => {
+    setError("");
     try {
       await navigator.clipboard.writeText(code || "");
       setCopied(true);
@@ -210,7 +225,7 @@ function AiLearningHistory() {
 
     if (item.learningMode === "EXPLANATION") {
       return (
-        <div className="prose prose-invert max-w-none">
+        <div className="prose prose-invert max-w-none break-words [&_h1]:mb-4 [&_h1]:text-2xl [&_h2]:mt-6 [&_h2]:mb-3 [&_h2]:text-xl [&_h3]:mt-4 [&_h3]:font-semibold [&_p]:my-3 [&_ul]:list-disc [&_ol]:list-decimal [&_li]:ml-5 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-[#080812] [&_pre]:p-4">
           <ReactMarkdown>
             {typeof result === "string"
               ? result
@@ -235,7 +250,7 @@ function AiLearningHistory() {
             {result.introduction}
           </p>
 
-          {result.steps?.map((step, index) => (
+          {(Array.isArray(result.steps) ? result.steps : []).map((step, index) => (
             <div
               key={index}
               className="rounded-xl border border-white/10 bg-[#0b0b16] p-5"
@@ -271,7 +286,7 @@ function AiLearningHistory() {
                   </p>
 
                   <div className="mt-3 space-y-2">
-                    {step.question.options?.map(
+                    {(Array.isArray(step.question.options) ? step.question.options : []).map(
                       (option, optionIndex) => (
                         <div
                           key={optionIndex}
@@ -324,7 +339,7 @@ function AiLearningHistory() {
             </p>
           )}
 
-          {result.scenes?.map((scene, index) => (
+          {(Array.isArray(result.scenes) ? result.scenes : []).map((scene, index) => (
             <div
               key={index}
               className="rounded-xl border border-fuchsia-500/20 bg-[#0b0b16] p-5"
@@ -402,7 +417,7 @@ function AiLearningHistory() {
 
       <main className="mx-auto max-w-7xl px-5 py-10 md:px-8">
         {/* Introduction */}
-        <section className="mb-8">
+        <section className="mb-8 rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-500/15 via-[#11111f] to-blue-500/10 p-6 md:p-10">
           <div className="mb-3 flex items-center gap-2 text-sm text-purple-400">
             <History size={17} />
             Your Learning Journey
@@ -458,7 +473,7 @@ function AiLearningHistory() {
           ].map(({ title, value, icon: Icon, color }) => (
             <div
               key={title}
-              className="rounded-2xl border border-white/10 bg-[#11111f] p-6"
+              className="rounded-2xl border border-white/10 bg-[#11111f] p-6 shadow-lg shadow-black/10"
             >
               <div className="mb-4 flex items-center justify-between">
                 <p className="text-sm text-gray-400">
@@ -474,8 +489,8 @@ function AiLearningHistory() {
         </div>
 
         {/* Search and Filter */}
-        <div className="mb-6 flex flex-col gap-4 md:flex-row">
-          <div className="relative flex-1">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#11111f] p-4">
+          <div className="relative min-w-[200px] flex-1">
             <Search
               size={19}
               className="absolute left-4 top-3.5 text-gray-500"
@@ -502,9 +517,19 @@ function AiLearningHistory() {
             ))}
           </select>
 
+          <select aria-label="Filter by language" value={languageFilter} onChange={event => setLanguageFilter(event.target.value)} className="rounded-xl border border-white/10 bg-[#080812] px-4 py-3 text-sm">
+            <option value="ALL">All languages</option>
+            {languages.map(language => <option key={language} value={language}>{language}</option>)}
+          </select>
+          <select aria-label="Sort history" value={sortOrder} onChange={event => setSortOrder(event.target.value)} className="rounded-xl border border-white/10 bg-[#080812] px-4 py-3 text-sm">
+            <option value="NEWEST">Newest first</option>
+            <option value="OLDEST">Oldest first</option>
+          </select>
+          <button onClick={clearFilters} className="rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-300 hover:bg-white/5">Clear Filters</button>
+
           <button
             onClick={() => fetchHistory(true)}
-            disabled={refreshing}
+            disabled={loading || refreshing || deletingAll || deletingId !== null}
             className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#11111f] px-5 py-3 text-sm hover:bg-white/5 disabled:opacity-50"
           >
             <RefreshCw
@@ -516,7 +541,7 @@ function AiLearningHistory() {
 
           <button
             type="button"
-            onClick={handleDeleteAll}
+            onClick={() => setConfirmDelete({ all: true })}
             disabled={loading || refreshing || deletingAll || deletingId !== null || history.length === 0}
             className="flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             title="Permanently delete all saved AI learning history"
@@ -530,6 +555,7 @@ function AiLearningHistory() {
           </button>
         </div>
 
+        {!loading && <p className="mb-5 text-sm text-gray-400">Showing {filteredHistory.length} of {history.length} saved sessions</p>}
         {/* Error */}
         {error && (
           <div
@@ -543,15 +569,16 @@ function AiLearningHistory() {
 
         {/* Loading */}
         {loading ? (
-          <div className="flex min-h-[300px] flex-col items-center justify-center gap-4">
-            <LoaderCircle
-              size={35}
-              className="animate-spin text-purple-400"
-            />
-
-            <p className="text-gray-400">
-              Loading your learning history...
-            </p>
+          <div role="status" aria-label="Loading learning history" className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className="animate-pulse space-y-5 rounded-2xl border border-white/10 bg-[#11111f] p-6">
+                <div className="h-12 w-12 rounded-xl bg-white/10" />
+                <div className="h-5 w-3/4 rounded bg-white/10" />
+                <div className="h-3 w-1/2 rounded bg-white/10" />
+                <div className="h-24 rounded-xl bg-white/5" />
+                <div className="h-10 rounded-xl bg-white/10" />
+              </div>
+            ))}
           </div>
         ) : filteredHistory.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-[#11111f] px-6 py-20 text-center">
@@ -632,7 +659,7 @@ function AiLearningHistory() {
 
                   <div className="mt-auto flex gap-3 pt-6">
                     <button
-                      onClick={() => setSelectedHistory(item)}
+                      onClick={() => { setCopied(false); setSelectedHistory(item); }}
                       className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-3 text-sm font-semibold hover:from-purple-500 hover:to-blue-500"
                     >
                       <Eye size={17} />
@@ -640,8 +667,8 @@ function AiLearningHistory() {
                     </button>
 
                     <button
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deletingAll || deletingId !== null}
+                      onClick={() => setConfirmDelete({ id: item.id, title: item.title })}
+                      disabled={loading || refreshing || deletingAll || deletingId !== null}
                       className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-400 hover:bg-red-500/20 disabled:opacity-50"
                       title="Delete History"
                     >
@@ -661,6 +688,21 @@ function AiLearningHistory() {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div role="dialog" aria-modal="true" aria-labelledby="delete-history-title" className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/25 bg-[#11111f] p-6 shadow-xl">
+            <Trash2 size={28} className="mb-4 text-red-400" />
+            <h2 id="delete-history-title" className="text-xl font-bold">{confirmDelete.all ? "Delete all history?" : "Delete learning session?"}</h2>
+            <p className="mt-3 text-sm leading-6 text-gray-400">{confirmDelete.all ? `All ${history.length} saved sessions will be permanently deleted, including sessions outside the current filters.` : `Delete ${confirmDelete.title || "this saved session"}?`} This cannot be undone.</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button autoFocus onClick={() => setConfirmDelete(null)} className="rounded-xl border border-white/10 px-4 py-3 text-sm">Cancel</button>
+              <button onClick={() => confirmDelete.all ? handleDeleteAll() : handleDelete(confirmDelete.id)} className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold hover:bg-red-500">{confirmDelete.all ? "Delete All" : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* History Details Modal */}
       {selectedHistory && (
@@ -692,6 +734,7 @@ function AiLearningHistory() {
             </div>
 
             <div className="space-y-7 overflow-y-auto p-5 md:p-7">
+              {error && <p role="alert" className="rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
               {/* Saved Code */}
               <section>
                 <div className="mb-3 flex items-center justify-between">

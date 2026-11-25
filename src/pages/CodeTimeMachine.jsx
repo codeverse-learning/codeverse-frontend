@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Clock3, Code2, Play, Pause,
   RotateCcw, SkipBack, SkipForward, Terminal, Database,
@@ -82,9 +82,12 @@ function getExampleCode(language, key) {
 
 export default function CodeTimeMachine() {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState("python");
+  const [searchParams] = useSearchParams();
+  const requestedLanguage = searchParams.get("language");
+  const initialLanguage = LANGUAGES.some(item => item.id === requestedLanguage && item.available) ? requestedLanguage : "python";
+  const [language, setLanguage] = useState(initialLanguage);
   const [exampleKey, setExampleKey] = useState("loop");
-  const [code, setCode] = useState(EXAMPLES.loop.code);
+  const [code, setCode] = useState(() => getExampleCode(initialLanguage, "loop"));
   const [result, setResult] = useState(null);
   const [stepIndex, setStepIndex] = useState(-1);
   const [playing, setPlaying] = useState(false);

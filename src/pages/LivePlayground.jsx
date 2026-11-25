@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -20,11 +20,35 @@ import {
 export default function LivePlayground() {
   const navigate = useNavigate();
 
-  const [selected, setSelected] = useState("web");
+  // Read the environment requested by the course exercise
+  const [searchParams] = useSearchParams();
+
+  const requestedEnvironment = searchParams.get("environment");
+
+  // Automatically select a valid development environment
+  const [selected, setSelected] = useState(() => {
+
+    const isValidEnvironment =
+      requestedEnvironment === "web" ||
+      requestedEnvironment === "react-native" ||
+      requestedEnvironment === "flutter" ||
+      PLAYGROUNDS.some(
+        (item) => item.id === requestedEnvironment
+      );
+
+    return isValidEnvironment
+      ? requestedEnvironment
+      : "web";
+
+  });
 
   const framework = PLAYGROUNDS.find(
     (item) => item.id === selected
   );
+
+  // Check whether the playground was opened from a course
+  const openedFromCourse =
+    Boolean(requestedEnvironment);
 
   return (
     <div className="min-h-screen bg-[#080812] text-white">
@@ -76,6 +100,44 @@ export default function LivePlayground() {
 
         </div>
 
+        {/* Course Practice Information */}
+        {openedFromCourse && (
+          <div className="mb-6 rounded-2xl border border-purple-500/25 bg-gradient-to-r from-purple-500/10 to-blue-500/10 p-5 md:p-6">
+
+            <div className="flex items-start gap-4">
+
+              <div className="shrink-0 rounded-xl bg-purple-500/15 p-3">
+                <Code2
+                  size={24}
+                  className="text-purple-400"
+                />
+              </div>
+
+              <div>
+
+                <h2 className="font-semibold text-purple-200">
+                  Course Practice Mode
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-gray-400">
+                  Write your own solution to the practice
+                  exercise and preview your results using
+                  the development environment below.
+                </p>
+
+                <p className="mt-2 text-xs leading-5 text-gray-500">
+                  You can switch back to your course tab
+                  at any time. Exercise answers are not
+                  automatically graded.
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
         {/* Framework Selector */}
         <div className="mb-6">
 
@@ -92,16 +154,50 @@ export default function LivePlayground() {
 
         {/* Active Environment */}
         {selected === "web" ? (
-            <WebPlayground />
-            ) : selected === "react-native" ? (
-            <ReactNativePlayground />
-            ) : selected === "flutter" ? (
-            <FlutterPlayground />
-            ) : (
-            <FrameworkPlayground
-                key={selected}
-                framework={framework}
+
+          <WebPlayground />
+
+        ) : selected === "react-native" ? (
+
+          <ReactNativePlayground />
+
+        ) : selected === "flutter" ? (
+
+          <FlutterPlayground />
+
+        ) : framework ? (
+
+          <FrameworkPlayground
+            key={selected}
+            framework={framework}
+          />
+
+        ) : (
+
+          <div className="rounded-2xl border border-white/10 bg-[#11111f] p-8 text-center">
+
+            <Code2
+              size={36}
+              className="mx-auto mb-4 text-purple-400"
             />
+
+            <h2 className="text-lg font-semibold">
+              Environment Not Available
+            </h2>
+
+            <p className="mt-2 text-sm text-gray-400">
+              Please select another development environment.
+            </p>
+
+            <button
+              onClick={() => setSelected("web")}
+              className="mt-5 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold hover:bg-purple-500"
+            >
+              Open Web Playground
+            </button>
+
+          </div>
+
         )}
 
         <footer className="py-8 text-center text-xs text-gray-600">

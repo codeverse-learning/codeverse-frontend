@@ -9,15 +9,17 @@ import {
   CheckCircle2,
   Lightbulb,
   FileCode2,
-  Bug,
   BookOpen,
   WandSparkles,
+  GraduationCap,
+  Film,
+  Clock3,
+  History,
 } from "lucide-react";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
-import FeaturesSection from "../components/home/FeaturesSection";
 import CoursesSection from "../components/home/CoursesSection";
 import AboutSection from "../components/home/AboutSection";
 import CTASection from "../components/home/CTASection";
@@ -49,6 +51,11 @@ const staggerContainer = {
 
 function Home() {
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
+
+  const openTool = (path) => {
+    navigate(localStorage.getItem("token") ? path : "/register");
+  };
 
   const handleStartExplainer = () => {
     const token = localStorage.getItem("token");
@@ -73,55 +80,53 @@ function Home() {
       <div className="pointer-events-none absolute left-1/2 top-[500px] h-80 w-80 -translate-x-1/2 rounded-full bg-purple-500/[0.06] blur-[120px]" />
 
       {/* HERO SECTION */}
-      <section className="relative mx-auto grid max-w-7xl items-center gap-16 px-6 pb-28 pt-16 lg:grid-cols-2 lg:px-8 lg:pt-20">
+      <section className="relative mx-auto grid max-w-7xl items-center gap-8 px-5 py-10 lg:min-h-[calc(100svh-4rem)] lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-8">
         {/* Hero Content */}
         <motion.div
           variants={staggerContainer}
-          initial="hidden"
+          initial={reduceMotion ? false : "hidden"}
           animate="visible"
         >
           {/* Badge */}
           <motion.div
             variants={fadeUp}
-            className="mb-7 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-sm text-purple-300"
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-sm text-purple-300"
           >
-            <Sparkles size={16} className="animate-pulse" />
-            AI-Powered Code Understanding Platform
+            <Sparkles size={16} className="motion-safe:animate-pulse" />
+            AI-Powered Learning Platform
           </motion.div>
 
           {/* Main Heading */}
           <motion.h1
             variants={fadeUp}
-            className="max-w-2xl text-5xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl lg:text-7xl"
+            className="max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl xl:text-5xl"
           >
-            Understand
+            Learn. Code. Create.
             <span className="block bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              Any Code
+              with AI.
             </span>
-            with AI.
           </motion.h1>
 
           {/* Description */}
           <motion.p
             variants={fadeUp}
-            className="mt-6 max-w-xl text-base leading-8 text-slate-400 sm:text-lg"
+            className="mt-5 max-w-xl text-base leading-7 text-slate-400 sm:text-lg"
           >
-            Stop copying code without understanding it.
-            Paste your code into CODEVERSE and learn how
-            it works through clear explanations,
-            line-by-line analysis, and AI-powered guidance.
+            Explore programming courses, understand code with AI,
+            practice in live coding environments, and turn your study
+            materials into interactive learning resources.
           </motion.p>
 
           {/* Buttons */}
           <motion.div
             variants={fadeUp}
-            className="mt-9 flex flex-wrap gap-4"
+            className="mt-6 flex flex-wrap gap-4"
           >
             <motion.button
               type="button"
               onClick={handleStartExplainer}
-              whileHover={{ scale: 1.05, y: -3 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={reduceMotion ? undefined : { scale: 1.03, y: -2 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.97 }}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-7 py-4 font-semibold text-white shadow-xl shadow-purple-500/20 transition"
             >
               <WandSparkles size={19} />
@@ -131,8 +136,8 @@ function Home() {
 
             <motion.a
               href="#features"
-              whileHover={{ scale: 1.05, y: -3 }}
-              whileTap={{ scale: 0.97 }}
+              whileHover={reduceMotion ? undefined : { scale: 1.03, y: -2 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.97 }}
               className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-7 py-4 font-semibold text-white transition hover:bg-white/10"
             >
               <Play size={17} />
@@ -140,57 +145,26 @@ function Home() {
             </motion.a>
           </motion.div>
 
-          {/* Highlights */}
-          <motion.div
-            variants={fadeUp}
-            className="mt-12 flex flex-wrap gap-9"
-          >
-            <div>
-              <h3 className="text-xl font-bold text-white">
-                Explain
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Code Logic
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold text-white">
-                Analyze
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Line by Line
-              </p>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold text-white">
-                Improve
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Coding Skills
-              </p>
-            </div>
-          </motion.div>
+          
         </motion.div>
 
         {/* AI CODE EXPLAINER PREVIEW */}
         <motion.div
-          initial={{ opacity: 0, x: 60, scale: 0.95 }}
+          initial={reduceMotion ? false : { opacity: 0, x: 60, scale: 0.95 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           transition={{
             duration: 1,
             delay: 0.3,
             ease: "easeOut",
           }}
-          className="relative"
+          className="relative min-w-0"
         >
           {/* Glow */}
           <div className="absolute -inset-5 rounded-3xl bg-gradient-to-r from-purple-600/20 to-blue-600/20 blur-2xl" />
 
           {/* Code Editor */}
           <motion.div
-            animate={{ y: [0, -10, 0] }}
+            animate={{ y: 0 }}
             transition={{
               duration: 5,
               repeat: Infinity,
@@ -213,13 +187,13 @@ function Home() {
 
               <Terminal
                 size={18}
-                className="text-slate-500"
+                className="text-slate-400"
               />
             </div>
 
             {/* Code Preview */}
-            <div className="overflow-x-auto p-6 font-mono text-xs leading-8 sm:p-8 sm:text-sm">
-              <div className="mb-3 flex items-center gap-2 text-xs text-slate-500">
+            <div className="overflow-x-auto p-4 font-mono text-xs leading-6 sm:p-5 sm:text-sm">
+              <div className="mb-3 flex items-center gap-2 text-xs text-slate-400">
                 <FileCode2 size={14} />
                 YOUR CODE
               </div>
@@ -253,16 +227,16 @@ function Home() {
                 ))
               </div>
 
-              {/* AI Explanation Preview */}
-              <div className="mt-7 rounded-xl border border-purple-500/20 bg-purple-500/5 p-5">
-                <div className="mb-4 flex items-center gap-2 text-purple-400">
+              {/* Sample AI Explanation */}
+              <div className="mt-4 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                <div className="mb-3 flex items-center gap-2 text-purple-400">
                   <BrainCircuit size={19} />
                   <span className="text-sm font-semibold">
-                    AI Explanation Preview
+                    Sample AI Explanation
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex gap-3">
                     <CheckCircle2
                       size={17}
@@ -306,7 +280,7 @@ function Home() {
                   </div>
                 </div>
 
-                <div className="mt-5 border-t border-white/10 pt-4">
+                <div className="mt-3 border-t border-white/10 pt-3">
                   <div className="flex items-center gap-2 text-xs text-blue-300">
                     <Lightbulb size={16} />
                     Output: Hello, CODEVERSE
@@ -316,37 +290,37 @@ function Home() {
             </div>
           </motion.div>
 
-          {/* Floating AI Card */}
-          <motion.div
-            animate={{ y: [0, 12, 0] }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="absolute -bottom-7 -left-7 hidden items-center gap-3 rounded-xl border border-white/10 bg-[#19192b] p-4 shadow-xl sm:flex"
-          >
-            <div className="rounded-lg bg-purple-500/20 p-2 text-purple-400">
-              <BrainCircuit size={22} />
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-white">
-                AI Code Explainer
-              </p>
-
-              <p className="text-xs text-slate-400">
-                Learn how your code works
-              </p>
-            </div>
-
-            <span className="ml-2 h-2 w-2 rounded-full bg-purple-400" />
-          </motion.div>
+          
         </motion.div>
       </section>
 
-      {/* MAIN FEATURES */}
-      <FeaturesSection />
+      {/* MAIN FEATURES — implemented learning tools only */}
+      <section id="features" aria-labelledby="features-heading" className="relative mx-auto max-w-7xl scroll-mt-24 px-5 py-16 lg:px-8">
+        <div className="mb-10 text-center">
+          <p className="mb-3 text-sm font-semibold text-purple-300">YOUR LEARNING WORKSPACE</p>
+          <h2 id="features-heading" className="text-3xl font-bold text-white md:text-4xl">Explore CODEVERSE Features</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-slate-400">Learn programming, practice code and review your study materials in one place.</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { title: "AI Code Explainer", description: "Understand code through guided explanations and voice narration.", icon: BrainCircuit, path: "/code-explainer" },
+            { title: "Interactive AI Tutor", description: "Learn through interactive lessons, quizzes and answer feedback.", icon: GraduationCap, path: "/code-explainer" },
+            { title: "Visual Learning Studio", description: "Explore animated code walkthroughs and visual chapters.", icon: Film, path: "/code-explainer" },
+            { title: "Code Time Machine", description: "Trace execution, variables and output across 8 programming languages.", icon: Clock3, path: "/code-time-machine" },
+            { title: "Live Code Playground", description: "Write code and preview results across 9 coding environments.", icon: Code2, path: "/live-playground" },
+            { title: "Learning Hub", description: "Explore published programming courses, lessons and practice exercises.", icon: BookOpen, path: "/learning-hub" },
+            { title: "AI Study Packs", description: "Generate summaries, notes, flashcards and quizzes from documents, text or topics.", icon: FileCode2, path: "/study-packs" },
+            { title: "AI Learning History", description: "Review previously generated AI learning sessions.", icon: History, path: "/ai/history" },
+          ].map(({ title, description, icon: Icon, path }) => (
+            <button key={title} type="button" onClick={() => openTool(path)} className="group flex min-w-0 flex-col rounded-2xl border border-white/10 bg-[#11111f] p-6 text-left transition hover:border-purple-400/50 focus-visible:outline-2 focus-visible:outline-purple-400">
+              <span className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-300"><Icon size={24} /></span>
+              <h3 className="text-lg font-semibold text-white">{title}</h3>
+              <p className="mt-3 flex-1 text-sm leading-7 text-slate-400">{description}</p>
+              <span className="mt-6 flex items-center gap-2 text-sm font-medium text-purple-300">{title === "Interactive AI Tutor" || title === "Visual Learning Studio" ? "Open AI workspace" : "Explore"} <ArrowRight size={16} /></span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* HOW CODEVERSE WORKS */}
       <section className="relative mx-auto max-w-7xl px-6 py-20 lg:px-8">
@@ -357,12 +331,12 @@ function Home() {
           </div>
 
           <h2 className="text-3xl font-bold text-white md:text-4xl">
-            How CODEVERSE Works
+            How AI Code Explanation Works
           </h2>
 
           <p className="mx-auto mt-4 max-w-2xl text-slate-400">
             Three simple steps to understand your code
-            and improve your programming knowledge.
+            with the AI Code Explainer.
           </p>
         </div>
 
