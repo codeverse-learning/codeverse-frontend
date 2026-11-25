@@ -55,6 +55,11 @@ function StudentDashboard({ user }) {
     navigate("/study-packs");
   };
 
+  const openLearningHub = () => {
+    setSidebarOpen(false);
+    navigate("/learning-hub");
+  };
+
   const menu = [
     {
       name: "Dashboard",
@@ -81,9 +86,14 @@ function StudentDashboard({ user }) {
       action: openCodeExplainer,
     },
     {
-      name: "Study Packs",
-      icon: BookOpen,
+      name: "AI Study Packs",
+      icon: Sparkles,
       action: openStudyPacks,
+    },
+    {
+      name: "Learning Hub",
+      icon: BookOpen,
+      action: openLearningHub,
     },
   ];
 

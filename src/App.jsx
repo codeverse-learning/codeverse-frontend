@@ -13,6 +13,7 @@ import CodeExplainer from "./pages/CodeExplainer";
 import AiLearningHistory from "./pages/AiLearningHistory";
 import CodeTimeMachine from "./pages/CodeTimeMachine";
 import LivePlayground from "./pages/LivePlayground";
+import LearningHub from "./pages/StudyPacks";
 
 // Study Packs Feature
 import StudyPacks from "./features/study-packs/pages/StudyPacks";
@@ -92,6 +93,24 @@ function App() {
           />
 
         </Route>
+
+        {/* Learning Hub */}
+        <Route
+          path="/learning-hub"
+          element={<LearningHub />}
+        />
+
+        {/* AI Study Packs */}
+        <Route
+          path="/study-packs"
+          element={<StudyPacks />}
+        />
+
+        {/* Programming Lessons */}
+        <Route
+          path="/learn/:courseId"
+          element={<CourseLearning />}
+        />
 
         {/* Animation Development Test */}
         <Route
