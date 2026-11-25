@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Sparkles,
   LayoutDashboard,
   BookOpen,
   Layers3,
@@ -57,6 +58,25 @@ function AdminDashboard({ user }) {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const [aiForm, setAiForm] = useState({ programmingLanguage: "", category: "Programming", difficultyLevel: "BEGINNER", moduleCount: 3, lessonsPerModule: 3 });
+  const [generating, setGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const generateOutline = async (event) => {
+    event.preventDefault();
+    if (generating || !aiForm.programmingLanguage.trim()) return;
+    setGenerating(true); setAiError(""); setSuccess("");
+    try {
+      const { data } = await api.post("/courses/admin/generate-outline", {
+        ...aiForm, programmingLanguage: aiForm.programmingLanguage.trim(),
+        moduleCount: Number(aiForm.moduleCount), lessonsPerModule: Number(aiForm.lessonsPerModule),
+      }, { timeout: 300000 });
+      setSuccess(`${data.title} generated as a draft.`);
+      await fetchCourses();
+    } catch (err) {
+      setAiError(err.response?.status === 409 ? "A course with this language and level already exists. Check existing drafts." : err.response?.data?.message || "Generation failed or timed out. Refresh courses before retrying; a draft may already exist.");
+    } finally { setGenerating(false); }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -439,6 +459,21 @@ function AdminDashboard({ user }) {
             ))}
           </section>
 
+          <section className="mb-8 rounded-2xl border border-purple-500/20 bg-[#11111f] p-5 md:p-6">
+            <h2 className="flex items-center gap-2 text-xl font-bold"><Sparkles className="text-purple-400"/> AI Learning Generator</h2>
+            <p className="text-sm text-gray-400 mt-2">Generate course, module and lesson outlines as drafts. Review before publishing.</p>
+            <form onSubmit={generateOutline} className="mt-5 space-y-4">
+              <fieldset disabled={generating} className="grid sm:grid-cols-2 gap-4 disabled:opacity-60">
+                <label className={labelClass}>Programming Language<input required maxLength={80} className={inputClass} placeholder="e.g. CSS, Java" value={aiForm.programmingLanguage} onChange={e => setAiForm(old => ({...old, programmingLanguage:e.target.value}))}/></label>
+                <label className={labelClass}>Category<select className={inputClass} value={aiForm.category} onChange={e => setAiForm(old => ({...old, category:e.target.value}))}>{["Programming","Web Development","Mobile Development","Database","Data Science","Artificial Intelligence","Other"].map(v => <option key={v}>{v}</option>)}</select></label>
+                <label className={labelClass}>Difficulty<select className={inputClass} value={aiForm.difficultyLevel} onChange={e => setAiForm(old => ({...old, difficultyLevel:e.target.value}))}>{["BEGINNER","INTERMEDIATE","ADVANCED"].map(v => <option key={v}>{v}</option>)}</select></label>
+                {[["moduleCount","Modules",10],["lessonsPerModule","Lessons per module",6]].map(([key,label,max]) => <label key={key} className={labelClass}>{label}<select className={inputClass} value={aiForm[key]} onChange={e => setAiForm(old => ({...old,[key]:Number(e.target.value)}))}>{Array.from({length:max},(_,i) => <option key={i+1} value={i+1}>{i+1}</option>)}</select></label>)}
+              </fieldset>
+              <p className="text-sm text-purple-300">{aiForm.moduleCount * aiForm.lessonsPerModule} lessons · Estimated {Math.ceil(aiForm.moduleCount * aiForm.lessonsPerModule / 3)} hours</p>
+              {aiError && <p role="alert" className="text-sm text-red-300">{aiError}</p>}
+              <button type="submit" disabled={generating || !aiForm.programmingLanguage.trim()} className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-5 py-3 text-sm font-medium disabled:opacity-50"><Sparkles size={17}/>{generating ? "Generating outline… Please wait" : "Generate Learning Outline"}</button>
+            </form>
+          </section>
           {/* Course Management */}
           <section>
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -567,7 +602,7 @@ function AdminDashboard({ user }) {
 
                     <button
                       type="button"
-                      onClick={() => setContentCourse(course)}
+                      disabled={generating} onClick={() => setContentCourse(course)}
                       className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-3 text-sm font-medium transition"
                     >
                       <Layers3 size={17} /> Manage Content
