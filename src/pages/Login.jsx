@@ -841,6 +841,7 @@ function Login() {
                   onError={handleGoogleError}
                   theme="filled_white"
                   size="large"
+                  type="standard"
                   shape="rectangular"
                   text="continue_with"
                   width="350"
