@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { GoogleLogin } from "@react-oauth/google";
@@ -23,19 +22,196 @@ function GithubIcon() {
   );
 }
 
+// Convert bytes to Base64URL format
+function base64UrlEncode(bytes) {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+// Generate cryptographically secure PKCE code verifier
+function generateCodeVerifier() {
+  const randomBytes = new Uint8Array(32);
+
+  crypto.getRandomValues(randomBytes);
+
+  return base64UrlEncode(randomBytes);
+}
+
+// Generate SHA-256 PKCE code challenge
+async function generateCodeChallenge(codeVerifier) {
+  const encoder = new TextEncoder();
+
+  const data = encoder.encode(codeVerifier);
+
+  const digest = await crypto.subtle.digest("SHA-256", data);
+
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+// Validate Google authentication nonce
+function isValidGoogleNonce(nonce) {
+  return (
+    typeof nonce === "string" &&
+    /^[A-Za-z0-9_-]{43}$/.test(nonce)
+  );
+}
+
+// Share an active nonce request to avoid duplicate requests
+// during React StrictMode development rendering
+let pendingGoogleNonceRequest = null;
+
+function requestGoogleNonce() {
+  if (!pendingGoogleNonceRequest) {
+    const startedAt = Date.now();
+
+    pendingGoogleNonceRequest = api
+      .post(
+        "/auth/google/nonce",
+        {},
+        {
+          withCredentials: true,
+          timeout: 10000,
+        }
+      )
+      .then((response) => {
+        const nonce = response.data?.nonce;
+
+        if (!isValidGoogleNonce(nonce)) {
+          throw new Error(
+            "Invalid Google authentication challenge."
+          );
+        }
+
+        return {
+          nonce,
+          expiresAt: startedAt + 4 * 60 * 1000,
+        };
+      })
+      .finally(() => {
+        pendingGoogleNonceRequest = null;
+      });
+  }
+
+  return pendingGoogleNonceRequest;
+}
+
 function Login() {
   const navigate = useNavigate();
 
+  // Login form states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Authentication states
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
 
+  // Google authentication challenge
+  const [googleNonce, setGoogleNonce] = useState("");
+  const [googleNonceLoading, setGoogleNonceLoading] =
+    useState(true);
+  const [googleNonceError, setGoogleNonceError] =
+    useState("");
+  const [googleNonceVersion, setGoogleNonceVersion] =
+    useState(0);
+
+  // Authentication references
+  const googleNonceExpiresAt = useRef(0);
+  const googleRequestInProgress = useRef(false);
+  const authenticationInProgress = useRef(false);
+
+  // Prevent simultaneous authentication requests
+  const isBusy =
+    loading || googleLoading || githubLoading;
+
+  // Request a secure Google authentication challenge
+  useEffect(() => {
+    let active = true;
+
+    const loadGoogleNonce = async () => {
+      setGoogleNonce("");
+      setGoogleNonceError("");
+      setGoogleNonceLoading(true);
+
+      googleNonceExpiresAt.current = 0;
+
+      try {
+        const challenge = await requestGoogleNonce();
+
+        if (!active) return;
+
+        googleNonceExpiresAt.current =
+          challenge.expiresAt;
+
+        setGoogleNonce(challenge.nonce);
+
+      } catch (err) {
+        if (!active) return;
+
+        if (err.response?.status === 429) {
+          setGoogleNonceError(
+            "Too many attempts. Please try again later."
+          );
+        } else {
+          setGoogleNonceError(
+            "Unable to initialize Google authentication."
+          );
+        }
+
+      } finally {
+        if (active) {
+          setGoogleNonceLoading(false);
+        }
+      }
+    };
+
+    loadGoogleNonce();
+
+    return () => {
+      active = false;
+    };
+
+  }, [googleNonceVersion]);
+
+  // Request a fresh Google challenge
+  const refreshGoogleNonce = () => {
+    if (
+      authenticationInProgress.current ||
+      googleRequestInProgress.current
+    ) {
+      return;
+    }
+
+    googleNonceExpiresAt.current = 0;
+
+    setError("");
+    setGoogleNonce("");
+    setGoogleNonceError("");
+    setGoogleNonceLoading(true);
+
+    setGoogleNonceVersion(
+      (previous) => previous + 1
+    );
+  };
+
+  // Save authentication details
   const saveLogin = (data) => {
+    if (
+      typeof data?.token !== "string" ||
+      !data.token.trim() ||
+      !data.userId
+    ) {
+      throw new Error(
+        "Invalid authentication response."
+      );
+    }
+
     localStorage.setItem("token", data.token);
 
     localStorage.setItem(
@@ -51,113 +227,377 @@ function Login() {
     navigate("/dashboard", { replace: true });
   };
 
+  // Email and password login
   const handleLogin = async (e) => {
     e.preventDefault();
+
+    if (
+      isBusy ||
+      authenticationInProgress.current
+    ) {
+      return;
+    }
 
     setError("");
     setMessage("");
 
-    if (!email.trim() || !password) {
-      setError("Please enter your email and password.");
+    const normalizedEmail =
+      email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
+      setError(
+        "Please enter your email and password."
+      );
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Please enter a valid email address.");
+    if (
+      normalizedEmail.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        normalizedEmail
+      )
+    ) {
+      setError(
+        "Please enter a valid email address."
+      );
       return;
     }
+
+    // BCrypt password byte-length validation
+    const passwordBytes =
+      new TextEncoder().encode(password).length;
+
+    if (passwordBytes > 72) {
+      setError("Invalid email or password.");
+      return;
+    }
+
+    authenticationInProgress.current = true;
 
     try {
       setLoading(true);
 
-      const response = await api.post("/auth/login", {
-        email: email.trim(),
-        password,
-      });
+      const response = await api.post(
+        "/auth/login",
+        {
+          email: normalizedEmail,
+          password,
+        }
+      );
 
       saveLogin(response.data);
+
     } catch (err) {
+      const status = err.response?.status;
+
       if (
-        err.response?.status === 401 ||
-        err.response?.status === 403
+        status === 400 ||
+        status === 401 ||
+        status === 403
       ) {
         setError("Invalid email or password.");
-      } else if (err.response?.data?.message) {
-        setError(err.response.data.message);
+      } else if (status === 429) {
+        setError(
+          "Too many login attempts. Please try again later."
+        );
       } else {
-        setError("Unable to connect to the server. Please try again.");
+        setError(
+          "Unable to log in. Please try again."
+        );
       }
+
     } finally {
+      authenticationInProgress.current = false;
       setLoading(false);
     }
   };
 
-  // Google authentication
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setError("");
-    setMessage("");
-
-    const googleIdToken = credentialResponse?.credential;
-
-    if (!googleIdToken) {
-      setError("Unable to get Google authentication token.");
+  // Google authentication with nonce verification
+  const handleGoogleSuccess = async (
+    credentialResponse
+  ) => {
+    if (
+      isBusy ||
+      authenticationInProgress.current ||
+      googleRequestInProgress.current
+    ) {
       return;
     }
 
-    try {
-      setGoogleLoading(true);
+    setError("");
+    setMessage("");
 
-      const response = await api.post("/auth/google", {
-        idToken: googleIdToken,
-      });
+    const googleIdToken =
+      credentialResponse?.credential;
+
+    // Capture the current nonce before clearing it
+    const currentNonce = googleNonce;
+
+    // Validate Google ID token
+    if (
+      typeof googleIdToken !== "string" ||
+      !googleIdToken.trim() ||
+      googleIdToken.length > 16384
+    ) {
+      googleNonceExpiresAt.current = 0;
+      setGoogleNonce("");
+
+      setError(
+        "Unable to get a valid Google authentication token."
+      );
+
+      setGoogleNonceError(
+        "Please retry Google authentication."
+      );
+
+      return;
+    }
+
+    // Validate nonce and expiration time
+    if (
+      !isValidGoogleNonce(currentNonce) ||
+      Date.now() >= googleNonceExpiresAt.current
+    ) {
+      googleNonceExpiresAt.current = 0;
+      setGoogleNonce("");
+
+      setGoogleNonceError(
+        "Your Google authentication session has expired. Please retry."
+      );
+
+      return;
+    }
+
+    authenticationInProgress.current = true;
+    googleRequestInProgress.current = true;
+
+    setGoogleLoading(true);
+
+    // Prevent reuse of the current challenge
+    setGoogleNonce("");
+    googleNonceExpiresAt.current = 0;
+
+    let loginSuccessful = false;
+
+    try {
+      // Send Google ID token, nonce and session cookie
+      const response = await api.post(
+        "/auth/google",
+        {
+          idToken: googleIdToken,
+          nonce: currentNonce,
+        },
+        {
+          withCredentials: true,
+          timeout: 30000,
+        }
+      );
 
       saveLogin(response.data);
+
+      loginSuccessful = true;
+
     } catch (err) {
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else if (err.response) {
-        setError("Google login failed. Please try again.");
+      const status = err.response?.status;
+
+      if (status === 429) {
+        setError(
+          "Too many authentication attempts. Please try again later."
+        );
       } else {
-        setError("Unable to connect to the server. Please try again.");
+        setError(
+          "Google login failed. Please try again or use your existing login method."
+        );
       }
+
     } finally {
+      googleRequestInProgress.current = false;
+      authenticationInProgress.current = false;
+
       setGoogleLoading(false);
+
+      if (!loginSuccessful) {
+        setGoogleNonceError(
+          "Please retry to start a new secure Google login session."
+        );
+      }
     }
   };
 
+  // Handle Google authentication errors
   const handleGoogleError = () => {
-    setError("Google authentication failed. Please try again.");
+    if (
+      authenticationInProgress.current ||
+      googleRequestInProgress.current
+    ) {
+      return;
+    }
+
+    googleNonceExpiresAt.current = 0;
+
+    setGoogleNonce("");
+
+    setError(
+      "Google authentication failed. Please try again."
+    );
+
+    setGoogleNonceError(
+      "Please retry Google authentication."
+    );
   };
 
-  // GitHub authentication
-  const handleSocialLogin = (provider) => {
+  // GitHub authentication with PKCE
+  const handleSocialLogin = async (provider) => {
+    if (
+      isBusy ||
+      authenticationInProgress.current
+    ) {
+      return;
+    }
+
     setError("");
     setMessage("");
 
     if (provider === "GitHub") {
-      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+      const clientId =
+        import.meta.env.VITE_GITHUB_CLIENT_ID;
 
       if (!clientId) {
-        setError("GitHub Client ID is not configured.");
+        setError(
+          "GitHub Client ID is not configured."
+        );
         return;
       }
 
-      const state = crypto.randomUUID();
+      authenticationInProgress.current = true;
 
-      sessionStorage.setItem("github_oauth_state", state);
+      try {
+        setGithubLoading(true);
 
-      const redirectUri = "http://localhost:5173/github/callback";
+        // Web Crypto requires a secure browser context
+        if (
+          !window.isSecureContext ||
+          !window.crypto?.subtle ||
+          !window.crypto?.getRandomValues ||
+          !window.crypto?.randomUUID
+        ) {
+          throw new Error(
+            "Secure authentication is unavailable."
+          );
+        }
 
-      const githubUrl = new URL(
-        "https://github.com/login/oauth/authorize"
-      );
+        // Environment-based callback URL
+        const redirectUri =
+          import.meta.env.VITE_GITHUB_REDIRECT_URI ||
+          `${window.location.origin}/github/callback`;
 
-      githubUrl.searchParams.set("client_id", clientId);
-      githubUrl.searchParams.set("redirect_uri", redirectUri);
-      githubUrl.searchParams.set("scope", "read:user user:email");
-      githubUrl.searchParams.set("state", state);
+        const callbackUrl = new URL(redirectUri);
 
-      window.location.href = githubUrl.toString();
+        if (
+          callbackUrl.origin !== window.location.origin ||
+          callbackUrl.pathname !== "/github/callback" ||
+          callbackUrl.search ||
+          callbackUrl.hash ||
+          callbackUrl.username ||
+          callbackUrl.password
+        ) {
+          throw new Error(
+            "Invalid GitHub callback configuration."
+          );
+        }
+
+        // Secure random OAuth state
+        const state = crypto.randomUUID();
+
+        // Generate PKCE verifier and challenge
+        const codeVerifier = generateCodeVerifier();
+
+        const codeChallenge =
+          await generateCodeChallenge(codeVerifier);
+
+        // Save OAuth state and creation time
+        sessionStorage.setItem(
+          "github_oauth_state",
+          state
+        );
+
+        sessionStorage.setItem(
+          "github_oauth_started",
+          String(Date.now())
+        );
+
+        // Temporarily save PKCE code verifier
+        sessionStorage.setItem(
+          "github_oauth_code_verifier",
+          codeVerifier
+        );
+
+        // GitHub authorization URL
+        const githubUrl = new URL(
+          "https://github.com/login/oauth/authorize"
+        );
+
+        githubUrl.searchParams.set(
+          "client_id",
+          clientId
+        );
+
+        githubUrl.searchParams.set(
+          "redirect_uri",
+          redirectUri
+        );
+
+        githubUrl.searchParams.set(
+          "scope",
+          "read:user user:email"
+        );
+
+        githubUrl.searchParams.set(
+          "state",
+          state
+        );
+
+        // PKCE authorization parameters
+        githubUrl.searchParams.set(
+          "code_challenge",
+          codeChallenge
+        );
+
+        githubUrl.searchParams.set(
+          "code_challenge_method",
+          "S256"
+        );
+
+        // Redirect to GitHub
+        window.location.href = githubUrl.toString();
+
+      } catch {
+        // Clear temporary OAuth data
+        try {
+          sessionStorage.removeItem(
+            "github_oauth_state"
+          );
+
+          sessionStorage.removeItem(
+            "github_oauth_started"
+          );
+
+          sessionStorage.removeItem(
+            "github_oauth_code_verifier"
+          );
+
+        } catch {
+          // Browser storage may be unavailable
+        }
+
+        authenticationInProgress.current = false;
+
+        setGithubLoading(false);
+
+        setError(
+          "Unable to start GitHub authentication."
+        );
+      }
     }
   };
 
@@ -166,6 +606,7 @@ function Login() {
 
       {/* Background */}
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-purple-600/20 blur-[130px]" />
+
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-blue-600/20 blur-[130px]" />
 
       {/* Login Card */}
@@ -204,11 +645,17 @@ function Login() {
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleLogin} className="mt-8 space-y-5">
+        <form
+          onSubmit={handleLogin}
+          className="mt-8 space-y-5"
+        >
 
           {/* Email */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-300">
+            <label
+              htmlFor="login-email"
+              className="mb-2 block text-sm font-medium text-slate-300"
+            >
               Email Address
             </label>
 
@@ -219,10 +666,18 @@ function Login() {
               />
 
               <input
+                id="login-email"
+                name="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
                 placeholder="you@example.com"
+                autoComplete="username"
+                maxLength={254}
+                required
+                disabled={isBusy}
                 className="w-full rounded-xl border border-white/10 bg-[#080812] py-3 pl-12 pr-4 text-white outline-none transition placeholder:text-slate-600 focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/10"
               />
             </div>
@@ -231,14 +686,20 @@ function Login() {
           {/* Password */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium text-slate-300">
+              <label
+                htmlFor="login-password"
+                className="text-sm font-medium text-slate-300"
+              >
                 Password
               </label>
 
               <button
                 type="button"
+                disabled={isBusy}
                 onClick={() =>
-                  setMessage("Forgot password feature will be added later.")
+                  setMessage(
+                    "Forgot password feature will be added later."
+                  )
                 }
                 className="text-xs text-purple-400 transition hover:text-purple-300"
               >
@@ -253,33 +714,60 @@ function Login() {
               />
 
               <input
-                type={showPassword ? "text" : "password"}
+                id="login-password"
+                name="password"
+                type={
+                  showPassword ? "text" : "password"
+                }
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
                 placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+                disabled={isBusy}
                 className="w-full rounded-xl border border-white/10 bg-[#080812] py-3 pl-12 pr-12 text-white outline-none transition placeholder:text-slate-600 focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/10"
               />
 
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                disabled={isBusy}
+                aria-label={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+                onClick={() =>
+                  setShowPassword(!showPassword)
+                }
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-white"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? (
+                  <EyeOff size={18} />
+                ) : (
+                  <Eye size={18} />
+                )}
               </button>
             </div>
           </div>
 
           {/* Error */}
           {error && (
-            <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <p
+              role="alert"
+              className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+            >
               {error}
             </p>
           )}
 
           {/* Message */}
           {message && (
-            <p className="rounded-lg border border-purple-500/20 bg-purple-500/10 px-4 py-3 text-sm leading-6 text-purple-300">
+            <p
+              role="status"
+              className="rounded-lg border border-purple-500/20 bg-purple-500/10 px-4 py-3 text-sm leading-6 text-purple-300"
+            >
               {message}
             </p>
           )}
@@ -287,7 +775,7 @@ function Login() {
           {/* Login Button */}
           <button
             type="submit"
-            disabled={loading || googleLoading}
+            disabled={isBusy}
             className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 py-3.5 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:shadow-purple-500/30 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Logging in..." : "Login"}
@@ -304,9 +792,11 @@ function Login() {
         {/* Divider */}
         <div className="my-7 flex items-center gap-4">
           <div className="h-px flex-1 bg-white/10" />
+
           <span className="text-xs font-medium text-slate-500">
             OR CONTINUE WITH
           </span>
+
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
@@ -314,14 +804,39 @@ function Login() {
         <div className="mx-auto flex w-full max-w-[350px] flex-col gap-3">
 
           {/* Google Authentication */}
-          <div className="flex h-10 w-full items-center justify-center overflow-hidden rounded-md">
-            {googleLoading ? (
-              <div className="flex h-10 w-full items-center justify-center rounded-md bg-white text-sm font-medium text-gray-700">
-                Connecting to Google...
+          <div className="flex w-full flex-col gap-2">
+
+            {isBusy || googleNonceLoading ? (
+
+              <div
+                role="status"
+                className="flex h-10 w-full items-center justify-center rounded-md bg-white text-sm font-medium text-gray-700"
+              >
+                {googleLoading
+                  ? "Connecting to Google..."
+                  : googleNonceLoading
+                    ? "Preparing secure login..."
+                    : "Please wait..."}
               </div>
+
+            ) : googleNonceError || !googleNonce ? (
+
+              <button
+                type="button"
+                onClick={refreshGoogleNonce}
+                disabled={isBusy}
+                className="flex h-10 w-full items-center justify-center rounded-md border border-white/10 bg-[#19192b] px-4 text-sm font-medium text-white transition hover:bg-[#222238] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Retry Google Authentication
+              </button>
+
             ) : (
-              <div className="flex h-10 w-full items-center justify-center [&>div]:!w-full [&_iframe]:!max-w-full">
+
+              <div className="flex h-10 w-full items-center justify-center overflow-hidden rounded-md [&>div]:!w-full [&_iframe]:!max-w-full">
+
                 <GoogleLogin
+                  key={googleNonce}
+                  nonce={googleNonce}
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
                   theme="filled_white"
@@ -330,19 +845,36 @@ function Login() {
                   text="continue_with"
                   width="350"
                 />
+
               </div>
+
             )}
+
+            {googleNonceError && !isBusy && (
+              <p
+                role="alert"
+                className="text-center text-xs text-slate-400"
+              >
+                {googleNonceError}
+              </p>
+            )}
+
           </div>
 
           {/* GitHub Authentication */}
           <button
             type="button"
-            onClick={() => handleSocialLogin("GitHub")}
-            disabled={googleLoading || loading}
+            onClick={() =>
+              handleSocialLogin("GitHub")
+            }
+            disabled={isBusy}
             className="flex h-10 w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-[#19192b] px-4 text-sm font-medium text-white transition hover:bg-[#222238] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <GithubIcon />
-            Continue with GitHub
+
+            {githubLoading
+              ? "Connecting to GitHub..."
+              : "Continue with GitHub"}
           </button>
 
         </div>
@@ -350,6 +882,7 @@ function Login() {
         {/* Register Link */}
         <p className="mt-7 text-center text-sm text-slate-400">
           Don't have an account?{" "}
+
           <Link
             to="/register"
             className="font-semibold text-purple-400 transition hover:text-purple-300"
