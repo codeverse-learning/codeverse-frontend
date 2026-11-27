@@ -18,8 +18,10 @@ import {
   X,
 } from "lucide-react";
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:8080/api" : "/api")
+).replace(/\/$/, "");
 
 const DEFAULT_CODE = `import 'package:flutter/material.dart';
 

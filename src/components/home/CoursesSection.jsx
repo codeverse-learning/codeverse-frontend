@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 
 const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8080";
+  (import.meta.env.VITE_API_URL ||
+    (import.meta.env.DEV ? "http://localhost:8080/api" : "/api")).replace(/\/$/, "");
 
 const courseStyles = [
   {
@@ -55,7 +56,7 @@ function CoursesSection() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(`${API_URL}/api/courses`, {
+        const response = await fetch(`${API_URL}/courses`, {
           signal: controller.signal,
         });
 

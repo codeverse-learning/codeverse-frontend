@@ -6,7 +6,10 @@ import {
   Info, Sparkles, LockKeyhole, ChevronDown, Loader2, Copy, CheckCircle2, Gauge,
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:8080/api" : "/api")
+).replace(/\/$/, "");
 
 const LANGUAGES = [
   { id: "python", label: "Python", available: true },
