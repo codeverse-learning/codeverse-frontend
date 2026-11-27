@@ -1,5 +1,5 @@
-
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import DevicePreview, { DeviceControls } from "./DevicePreview";
 import Editor from "@monaco-editor/react";
 
 import {
@@ -98,25 +98,9 @@ const TABS = [
   },
 ];
 
-const DEVICES = [
-  {
-    id: "desktop",
-    icon: Monitor,
-    width: "100%",
-  },
-  {
-    id: "tablet",
-    icon: Tablet,
-    width: "768px",
-  },
-  {
-    id: "mobile",
-    icon: Smartphone,
-    width: "375px",
-  },
-];
 
 export default function WebPlayground() {
+  const previewRef = useRef(null);
   const [html, setHtml] = useState(DEFAULT_HTML);
   const [css, setCss] = useState(DEFAULT_CSS);
   const [javascript, setJavascript] = useState(DEFAULT_JS);
@@ -245,15 +229,12 @@ export default function WebPlayground() {
     (tab) => tab.id === activeTab
   );
 
-  const previewWidth = DEVICES.find(
-    (item) => item.id === device
-  )?.width;
 
   return (
-    <section className="mt-6 w-full">
+    <section className="w-full">
 
       {/* Toolbar */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#11111f] p-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#11111f] p-2">
 
         <div className="flex items-center gap-3">
 
@@ -315,10 +296,10 @@ export default function WebPlayground() {
       </div>
 
       {/* Workspace */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 
         {/* Code Editor */}
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">
+        <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11111f] h-[var(--workspace-height)]">
 
           {/* Editor Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
@@ -371,8 +352,9 @@ export default function WebPlayground() {
           </div>
 
           {/* Monaco Editor */}
+          <div className="min-h-0 flex-1">
           <Editor
-            height="520px"
+            height="100%"
             path={activeFile?.file}
             language={activeTab}
             theme="vs-dark"
@@ -401,103 +383,22 @@ export default function WebPlayground() {
               cursorBlinking: "smooth",
             }}
           />
+          </div>
 
         </div>
 
         {/* Live Preview */}
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">
-
-          {/* Preview Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-
-            <div className="flex items-center gap-2">
-
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${
-                  autoRun
-                    ? "animate-pulse bg-green-400"
-                    : "bg-gray-500"
-                }`}
-              />
-
-              <h2 className="text-sm font-semibold text-white">
-                Live Preview
-              </h2>
-
-            </div>
-
-            {/* Device Controls */}
-            <div className="flex items-center gap-1 rounded-xl bg-[#090914] p-1">
-
-              {DEVICES.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.id}
-                    title={`${item.id} preview`}
-                    aria-label={`${item.id} preview`}
-                    aria-pressed={device === item.id}
-                    onClick={() => setDevice(item.id)}
-                    className={`rounded-lg p-2 transition ${
-                      device === item.id
-                        ? "bg-purple-500/20 text-purple-300"
-                        : "text-gray-500 hover:text-white"
-                    }`}
-                  >
-                    <Icon size={18} />
-                  </button>
-                );
-              })}
-
-            </div>
-
+        <div ref={previewRef} className="flex h-[var(--workspace-height)] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11111f] fullscreen:h-screen">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
+            <h2 className="text-sm font-semibold">Live Preview</h2>
+            <DeviceControls device={device} setDevice={setDevice} target={previewRef} />
           </div>
-
-          {/* Browser Bar */}
-          <div className="flex items-center gap-3 border-b border-white/10 bg-[#0c0c18] px-4 py-3">
-
-            <div className="flex gap-1.5">
-
-              <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-
-              <span className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
-
-              <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-
-            </div>
-
-            <div className="flex-1 rounded-lg bg-[#171727] px-3 py-1.5 text-center text-xs text-gray-400">
-              codeverse / preview
-            </div>
-
-          </div>
-
-          {/* Preview Frame */}
-          <div className="flex min-h-[520px] justify-center overflow-auto bg-[#090914] p-3">
-
-            <iframe
-              key={previewKey}
-              title="CODEVERSE Live Preview"
-              srcDoc={srcDoc}
-              sandbox="allow-scripts"
-              referrerPolicy="no-referrer"
-              style={{
-                width: previewWidth,
-                maxWidth: "100%",
-                height: "496px",
-              }}
-              className="rounded-lg border border-white/10 bg-white transition-all duration-300"
-            />
-
-          </div>
-
+          <DevicePreview device={device}>{({ width, height }) => <iframe key={previewKey} title="CODEVERSE Live Preview" srcDoc={srcDoc} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{ width, height, border: 0 }} />}</DevicePreview>
         </div>
-
       </div>
 
       {/* Workspace Status */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
 
         <span>
           HTML5 · CSS3 · JavaScript

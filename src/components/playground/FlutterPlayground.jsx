@@ -1,5 +1,5 @@
-
 import { useState, useRef } from "react";
+import DevicePreview, { DeviceControls } from "./DevicePreview";
 import Editor from "@monaco-editor/react";
 import {
   Play,
@@ -127,28 +127,9 @@ class _HomePageState extends State<HomePage> {
 }
 `;
 
-const DEVICES = [
-  {
-    id: "mobile",
-    name: "Mobile",
-    icon: Smartphone,
-    width: "340px",
-  },
-  {
-    id: "tablet",
-    name: "Tablet",
-    icon: Tablet,
-    width: "768px",
-  },
-  {
-    id: "desktop",
-    name: "Desktop",
-    icon: Monitor,
-    width: "100%",
-  },
-];
 
 function FlutterPlayground() {
+  const previewRef = useRef(null);
   const [code, setCode] = useState(DEFAULT_CODE);
   const [loading, setLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -156,15 +137,11 @@ function FlutterPlayground() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("idle");
   const [device, setDevice] = useState("mobile");
-  const [showConsole, setShowConsole] = useState(true);
-  const [fullscreen, setFullscreen] = useState(false);
+  const [showConsole, setShowConsole] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const runningRef = useRef(false);
 
-  const selectedDevice = DEVICES.find(
-    (item) => item.id === device
-  );
 
   const runCode = async () => {
     if (runningRef.current) return;
@@ -315,10 +292,10 @@ function FlutterPlayground() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-2">
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#11111f] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#11111f] p-2">
 
         <div className="flex items-center gap-3">
 
@@ -383,7 +360,7 @@ function FlutterPlayground() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
 
         {/* Code Editor */}
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">
+        <div className="flex h-[var(--workspace-height)] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">
 
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
 
@@ -425,8 +402,9 @@ function FlutterPlayground() {
 
           </div>
 
+          <div className="min-h-0 flex-1">
           <Editor
-            height="650px"
+            height="100%"
             language="dart"
             path="main.dart"
             theme="vs-dark"
@@ -450,180 +428,20 @@ function FlutterPlayground() {
               },
             }}
           />
+          </div>
 
         </div>
 
         {/* Live Preview */}
-        <div
-          className={`min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11111f] ${
-            fullscreen
-              ? "fixed inset-4 z-[100] flex flex-col shadow-2xl"
-              : ""
-          }`}
-        >
-
-          {/* Preview Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-
-            <div className="flex items-center gap-2">
-
-              <Monitor size={18} className="text-purple-400" />
-
-              <span className="text-sm font-medium text-white">
-                Live Preview
-              </span>
-
-            </div>
-
-            <div className="flex items-center gap-2">
-
-              {DEVICES.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setDevice(item.id)}
-                    title={item.name}
-                    className={`rounded-lg p-2 transition ${
-                      device === item.id
-                        ? "bg-purple-500/15 text-purple-400"
-                        : "text-gray-500 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <Icon size={18} />
-                  </button>
-                );
-              })}
-
-              <button
-                onClick={() => setFullscreen(!fullscreen)}
-                title={fullscreen ? "Exit fullscreen" : "Fullscreen"}
-                className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white"
-              >
-                {fullscreen ? (
-                  <X size={18} />
-                ) : (
-                  <Maximize size={18} />
-                )}
-              </button>
-
-            </div>
-
+        <div ref={previewRef} className="flex h-[var(--workspace-height)] min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11111f] fullscreen:h-screen">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
+            <span className="text-sm font-medium">Live Preview</span>
+            <DeviceControls device={device} setDevice={setDevice} target={previewRef} />
           </div>
-
-          {/* Preview Content */}
-          <div
-            className={`flex items-center justify-center overflow-auto bg-[#080812] p-4 sm:p-6 ${
-              fullscreen ? "flex-1 min-h-0" : "min-h-[650px]"
-            }`}
-          >
-
-            {loading ? (
-
-              <div className="max-w-xs text-center">
-
-                <Loader2
-                  size={48}
-                  className="mx-auto mb-5 animate-spin text-purple-400"
-                />
-
-                <h3 className="font-semibold text-white">
-                  Compiling Flutter Application
-                </h3>
-
-                <p className="mt-2 text-sm text-gray-400">
-                  Building your Dart code into a Flutter Web application.
-                  This may take a few minutes.
-                </p>
-
-              </div>
-
-            ) : previewUrl ? (
-
-              <div
-                className={`overflow-hidden bg-[#222230] transition-all ${
-                  device === "mobile"
-                    ? "rounded-[40px] border-[7px] border-[#353545] p-1"
-                    : "rounded-xl border border-white/10"
-                }`}
-                style={{
-                  width: selectedDevice.width,
-                  maxWidth: "100%",
-                }}
-              >
-
-                {device === "mobile" && (
-                  <div className="flex justify-center py-2">
-                    <div className="h-5 w-24 rounded-full bg-black" />
-                  </div>
-                )}
-
-                <iframe
-                  key={previewUrl}
-                  src={previewUrl}
-                  title="Flutter Application Preview"
-                  sandbox="allow-scripts"
-                  referrerPolicy="no-referrer"
-                  className={`w-full bg-white ${
-                    device === "mobile"
-                      ? "rounded-[28px]"
-                      : "rounded-lg"
-                  }`}
-                  style={{
-                    height: fullscreen
-                      ? "65vh"
-                      : device === "mobile"
-                      ? "540px"
-                      : "590px",
-                    border: "none",
-                  }}
-                />
-
-                {device === "mobile" && (
-                  <div className="flex justify-center py-3">
-                    <div className="h-1 w-24 rounded-full bg-gray-400" />
-                  </div>
-                )}
-
-              </div>
-
-            ) : (
-
-              <div className="max-w-xs text-center">
-
-                <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-sky-500/10">
-                  <Smartphone
-                    size={40}
-                    className="text-sky-400"
-                  />
-                </div>
-
-                <h3 className="text-lg font-semibold text-white">
-                  Flutter Preview
-                </h3>
-
-                <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                  Write your Dart code and click Run Code to see
-                  your application here.
-                </p>
-
-                <button
-                  onClick={runCode}
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white hover:bg-purple-500"
-                >
-                  <Play size={16} />
-                  Run Flutter App
-                </button>
-
-              </div>
-
-            )}
-
-          </div>
-
+          {previewUrl ? <DevicePreview device={device}>{({width, height}) => <iframe key={previewUrl} src={previewUrl} title="Flutter Application Preview" sandbox="allow-scripts" referrerPolicy="no-referrer" style={{width, height, border: 0}} />}</DevicePreview> : <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-3 text-center"><div>
+            {loading ? <><Loader2 className="mx-auto mb-2 animate-spin text-purple-400" size={32} /><p>Compiling Flutter Application</p></> : <><Smartphone className="mx-auto mb-2 text-sky-400" size={32} /><h3 className="font-semibold">Flutter Preview</h3><p className="my-2 text-xs text-gray-400">Write Dart code and run your application.</p><button onClick={runCode} className="rounded-lg bg-purple-600 px-4 py-2 text-sm">Run Flutter App</button></>}
+          </div></div>}
         </div>
-
       </div>
 
       {/* Error Message */}
