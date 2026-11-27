@@ -1,43 +1,18 @@
 
-import { Lock, Layers3 } from "lucide-react";
+import { Lock } from "lucide-react";
 import { PLAYGROUNDS } from "./playgroundTemplates";
 
 export default function PlaygroundSelector({
   selected,
   onSelect,
 }) {
-  const activeEnvironment = PLAYGROUNDS.find(
-    (item) => item.id === selected
-  );
-
   return (
     <div className="min-w-0">
-      {/* Section Label */}
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Layers3 size={13} className="text-gray-500" />
-
-          <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500">
-            Environment
-          </span>
-        </div>
-
-        {activeEnvironment && (
-          <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-
-            <span className="text-[11px] text-gray-400">
-              {activeEnvironment.shortName} selected
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* Environment Tabs */}
       <div
         role="group"
         aria-label="Development environment"
-        className="flex min-w-0 items-center gap-2 overflow-x-auto pb-3 [scrollbar-width:thin] [scrollbar-color:#30243f_transparent]"
+        className="flex min-w-0 items-center gap-2 overflow-x-auto py-2 [scrollbar-width:thin] [scrollbar-color:#30243f_transparent]"
       >
         {PLAYGROUNDS.map((item) => {
           const isActive = selected === item.id;

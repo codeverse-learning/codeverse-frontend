@@ -36,7 +36,7 @@ function FrameworkWorkspace({
 }) {
   const { sandpack } = useSandpack();
 
-  const [showFiles, setShowFiles] = useState(true);
+  const [showFiles, setShowFiles] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
 
   const [device, setDevice] = useState(
@@ -46,7 +46,7 @@ function FrameworkWorkspace({
   const [mobileView, setMobileView] =
     useState("editor");
 
-  const [editorWidth, setEditorWidth] = useState(45);
+  const [editorWidth, setEditorWidth] = useState(40);
   const [dragging, setDragging] = useState(false);
 
   const previewRef = useRef(null);
@@ -67,7 +67,7 @@ function FrameworkWorkspace({
         bounds.width) * 100;
 
     setEditorWidth(
-      Math.max(30, Math.min(70, percentage))
+      Math.max(25, Math.min(75, percentage))
     );
   }
 
@@ -165,7 +165,7 @@ function FrameworkWorkspace({
         className="flex min-h-[340px] min-w-0 overflow-hidden bg-[#0d0d18]"
         style={{
           height:
-            "max(420px, calc(var(--workspace-height, 600px) - 100px))",
+            "max(480px, calc(var(--workspace-height, 650px) - 100px))",
           "--editor-width": `${editorWidth}%`,
         }}
       >
@@ -247,8 +247,8 @@ function FrameworkWorkspace({
           role="separator"
           aria-label="Resize editor and preview"
           aria-orientation="vertical"
-          aria-valuemin={30}
-          aria-valuemax={70}
+          aria-valuemin={25}
+          aria-valuemax={75}
           aria-valuenow={Math.round(editorWidth)}
           tabIndex={0}
           title="Drag to resize. Double-click to reset."
@@ -265,7 +265,7 @@ function FrameworkWorkspace({
           onPointerUp={() => setDragging(false)}
           onPointerCancel={() => setDragging(false)}
           onLostPointerCapture={() => setDragging(false)}
-          onDoubleClick={() => setEditorWidth(45)}
+          onDoubleClick={() => setEditorWidth(40)}
           onKeyDown={(event) => {
             if (
               event.key === "ArrowLeft" ||
@@ -275,9 +275,9 @@ function FrameworkWorkspace({
 
               setEditorWidth((previous) =>
                 Math.max(
-                  30,
+                  25,
                   Math.min(
-                    70,
+                    75,
                     previous +
                       (event.key === "ArrowRight" ? 2 : -2)
                   )
@@ -326,7 +326,7 @@ function FrameworkWorkspace({
           <DevicePreview device={device}>
             {({ width, height }) => (
               <SandpackPreview
-                showNavigator
+                showNavigator={false}
                 showRefreshButton
                 showOpenInCodeSandbox={false}
                 style={{

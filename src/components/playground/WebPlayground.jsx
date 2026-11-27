@@ -208,7 +208,7 @@ export default function WebPlayground() {
   const [srcDoc, setSrcDoc] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
 
-  const [editorWidth, setEditorWidth] = useState(45);
+  const [editorWidth, setEditorWidth] = useState(40);
   const [dragging, setDragging] = useState(false);
 
   const [mobileView, setMobileView] =
@@ -394,7 +394,7 @@ export default function WebPlayground() {
         100;
 
       setEditorWidth(
-        Math.max(30, Math.min(70, percentage))
+        Math.max(25, Math.min(75, percentage))
       );
     }
 
@@ -661,7 +661,7 @@ export default function WebPlayground() {
         className="relative flex min-h-[340px] min-w-0 overflow-hidden border-x border-white/[0.08] bg-[#0d0d18]"
         style={{
           height:
-            "max(420px, calc(var(--workspace-height, 600px) - 100px))",
+            "max(480px, calc(var(--workspace-height, 650px) - 100px))",
           "--editor-width": `${editorWidth}%`,
         }}
       >
@@ -834,8 +834,8 @@ export default function WebPlayground() {
           role="separator"
           aria-label="Resize editor and preview"
           aria-orientation="vertical"
-          aria-valuemin={30}
-          aria-valuemax={70}
+          aria-valuemin={25}
+          aria-valuemax={75}
           aria-valuenow={Math.round(editorWidth)}
           tabIndex={0}
           title="Drag to resize. Double-click to reset."
@@ -843,7 +843,7 @@ export default function WebPlayground() {
             event.preventDefault();
             setDragging(true);
           }}
-          onDoubleClick={() => setEditorWidth(45)}
+          onDoubleClick={() => setEditorWidth(40)}
           onKeyDown={(event) => {
             if (
               event.key === "ArrowLeft" ||
@@ -853,9 +853,9 @@ export default function WebPlayground() {
 
               setEditorWidth((previous) =>
                 Math.max(
-                  30,
+                  25,
                   Math.min(
-                    70,
+                    75,
                     previous +
                       (event.key === "ArrowRight"
                         ? 2
@@ -911,26 +911,6 @@ export default function WebPlayground() {
               setDevice={setDevice}
               target={previewRef}
             />
-          </div>
-
-          {/* Browser Address Bar */}
-          <div className="flex h-9 shrink-0 items-center gap-3 border-b border-white/[0.06] bg-[#0d0d18] px-3">
-            <div className="flex shrink-0 items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-red-400/70" />
-              <span className="h-2 w-2 rounded-full bg-yellow-400/70" />
-              <span className="h-2 w-2 rounded-full bg-green-400/70" />
-            </div>
-
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-md bg-white/[0.04] px-2 py-1">
-              <Globe
-                size={11}
-                className="shrink-0 text-gray-500"
-              />
-
-              <span className="truncate text-[10px] text-gray-500">
-                codeverse / local-preview
-              </span>
-            </div>
           </div>
 
           {/* Preview Canvas */}
