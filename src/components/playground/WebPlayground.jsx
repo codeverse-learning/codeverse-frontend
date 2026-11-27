@@ -315,7 +315,7 @@ export default function WebPlayground() {
       </div>
 
       {/* Workspace */}
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
         {/* Code Editor */}
         <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">

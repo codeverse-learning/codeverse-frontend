@@ -380,7 +380,7 @@ function FlutterPlayground() {
       </div>
 
       {/* Editor and Preview */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
 
         {/* Code Editor */}
         <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#11111f]">

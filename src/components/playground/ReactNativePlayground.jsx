@@ -226,7 +226,7 @@ export default function ReactNativePlayground() {
             </h2>
 
             <p className="text-xs text-gray-500">
-              React Native · Mobile UI Development
+              React Native Â· Mobile UI Development
             </p>
           </div>
 
@@ -290,7 +290,7 @@ export default function ReactNativePlayground() {
         }}
       >
 
-        <div className="grid gap-px bg-white/10 xl:grid-cols-[1.3fr_1fr]">
+        <div className="grid grid-cols-1 gap-px bg-white/10 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
 
           {/* Code Editor */}
           <div className="min-w-0 bg-[#11111f]">
@@ -413,7 +413,7 @@ export default function ReactNativePlayground() {
       </SandpackProvider>
 
       <div className="border-t border-white/10 px-4 py-3 text-xs text-gray-500">
-        Powered by React Native Web · Browser-based
+        Powered by React Native Web Â· Browser-based
         mobile UI preview
       </div>
 

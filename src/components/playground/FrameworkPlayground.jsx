@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 import {
   SandpackProvider,
@@ -100,7 +100,7 @@ export default function FrameworkPlayground({
 
       {/* Sandpack Environment */}
       <SandpackProvider
-        key={`$DIL3-$DIL4`}
+        key={`$î€€DIL3î€-$î€€DIL4î€`}
         template={framework.template}
         files={framework.files}
         theme="dark"
@@ -113,7 +113,7 @@ export default function FrameworkPlayground({
         }}
         >
 
-        <div className="grid gap-px bg-white/10 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-px bg-white/10 md:grid-cols-2">
 
           {/* Editor */}
           <div className="min-w-0 bg-[#11111f]">
