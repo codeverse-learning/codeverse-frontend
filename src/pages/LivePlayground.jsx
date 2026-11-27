@@ -75,7 +75,7 @@ export default function LivePlayground() {
 
       </header>
 
-      <main className="mx-auto max-w-[1600px] px-5 py-8 md:px-10">
+      <main className="mx-auto w-full max-w-none px-4 py-8 md:px-6">
 
         {/* Introduction */}
         <div className="mb-7">
