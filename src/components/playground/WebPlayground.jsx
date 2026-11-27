@@ -1,4 +1,3 @@
-
 import {
   useEffect,
   useState,
@@ -209,7 +208,7 @@ export default function WebPlayground() {
   const [srcDoc, setSrcDoc] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
 
-  const [editorWidth, setEditorWidth] = useState(50);
+  const [editorWidth, setEditorWidth] = useState(45);
   const [dragging, setDragging] = useState(false);
 
   const [mobileView, setMobileView] =
@@ -747,6 +746,15 @@ export default function WebPlayground() {
           <div className="min-h-0 min-w-0 flex-1">
             <Editor
               height="100%"
+              loading={
+                <textarea
+                  aria-label="Source code (editor loading)"
+                  spellCheck={false}
+                  value={files[activeTab]}
+                  onChange={(event) => updateCode(event.target.value)}
+                  className="h-full w-full resize-none bg-[#0d0d18] p-4 font-mono text-sm text-gray-200 outline-none"
+                />
+              }
               path={`codeverse-web/${activeFile.file}`}
               language={activeTab}
               theme="codeverse-dark"
@@ -835,7 +843,7 @@ export default function WebPlayground() {
             event.preventDefault();
             setDragging(true);
           }}
-          onDoubleClick={() => setEditorWidth(50)}
+          onDoubleClick={() => setEditorWidth(45)}
           onKeyDown={(event) => {
             if (
               event.key === "ArrowLeft" ||
