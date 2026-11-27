@@ -46,7 +46,7 @@ function FrameworkWorkspace({
   const [mobileView, setMobileView] =
     useState("editor");
 
-  const [editorWidth, setEditorWidth] = useState(50);
+  const [editorWidth, setEditorWidth] = useState(45);
   const [dragging, setDragging] = useState(false);
 
   const previewRef = useRef(null);
@@ -165,7 +165,7 @@ function FrameworkWorkspace({
         className="flex min-h-[340px] min-w-0 overflow-hidden bg-[#0d0d18]"
         style={{
           height:
-            "max(340px, calc(var(--workspace-height, 600px) - 100px))",
+            "max(420px, calc(var(--workspace-height, 600px) - 100px))",
           "--editor-width": `${editorWidth}%`,
         }}
       >
@@ -265,7 +265,7 @@ function FrameworkWorkspace({
           onPointerUp={() => setDragging(false)}
           onPointerCancel={() => setDragging(false)}
           onLostPointerCapture={() => setDragging(false)}
-          onDoubleClick={() => setEditorWidth(50)}
+          onDoubleClick={() => setEditorWidth(45)}
           onKeyDown={(event) => {
             if (
               event.key === "ArrowLeft" ||

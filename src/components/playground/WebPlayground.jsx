@@ -661,7 +661,7 @@ export default function WebPlayground() {
         className="relative flex min-h-[340px] min-w-0 overflow-hidden border-x border-white/[0.08] bg-[#0d0d18]"
         style={{
           height:
-            "max(340px, calc(var(--workspace-height, 600px) - 100px))",
+            "max(420px, calc(var(--workspace-height, 600px) - 100px))",
           "--editor-width": `${editorWidth}%`,
         }}
       >

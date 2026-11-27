@@ -116,7 +116,7 @@ class _HomePageState extends State<HomePage> {
 function FlutterPlayground() {
   const previewRef = useRef(null);
   const workspaceRef = useRef(null);
-  const [editorWidth, setEditorWidth] = useState(50);
+  const [editorWidth, setEditorWidth] = useState(45);
   const [dragging, setDragging] = useState(false);
   const [mobileView, setMobileView] = useState("editor");
   const resize = (event) => {
@@ -302,7 +302,7 @@ function FlutterPlayground() {
       <div className="flex gap-1 border-b border-white/10 bg-[#0d0d18] p-1.5 md:hidden">
         {[["editor", "Editor", Code2], ["preview", "Preview", Eye]].map(([id, label, Icon]) => <button key={id} type="button" aria-pressed={mobileView === id} onClick={() => setMobileView(id)} className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-xs ${mobileView === id ? "bg-purple-500/15 text-purple-300" : "text-gray-400"}`}><Icon size={15}/>{label}</button>)}
       </div>
-      <div ref={workspaceRef} className="flex min-h-[340px] min-w-0 overflow-hidden bg-[#0d0d18]" style={{height: "max(340px, calc(var(--workspace-height, 600px) - 100px))", "--editor-width": `${editorWidth}%`}}>
+      <div ref={workspaceRef} className="flex min-h-[340px] min-w-0 overflow-hidden bg-[#0d0d18]" style={{height: "max(420px, calc(var(--workspace-height, 600px) - 100px))", "--editor-width": `${editorWidth}%`}}>
         <div className={`${mobileView === "editor" ? "flex" : "hidden"} w-full min-w-0 flex-col md:flex md:w-[var(--editor-width)] md:shrink-0`}>
           <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/10 bg-[#11111f] px-3">
             <span className="flex items-center gap-2 text-xs font-medium"><Code2 size={16} className="text-sky-400"/> main.dart</span>
@@ -314,7 +314,7 @@ function FlutterPlayground() {
           <div className="min-h-0 min-w-0 flex-1"><Editor height="100%" language="dart" path="main.dart" theme="vs-dark" value={code} onChange={value => setCode(value ?? "")} options={{fontSize:14,lineHeight:23,minimap:{enabled:false},automaticLayout:true,scrollBeyondLastLine:false,wordWrap:"on",tabSize:2,lineNumbers:"on",formatOnPaste:true,bracketPairColorization:{enabled:true},padding:{top:14,bottom:14}}}/></div>
           <div className="flex h-8 shrink-0 items-center justify-between border-t border-white/10 bg-[#10101b] px-3 text-[11px] text-gray-400"><span>Dart</span><span>UTF-8 · Spaces: 2</span></div>
         </div>
-        <div role="separator" aria-label="Resize editor and preview" aria-orientation="vertical" aria-valuemin={30} aria-valuemax={70} aria-valuenow={Math.round(editorWidth)} tabIndex={0} title="Drag to resize. Double-click to reset." onPointerDown={event => {event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);setDragging(true);}} onPointerMove={resize} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)} onLostPointerCapture={() => setDragging(false)} onDoubleClick={() => setEditorWidth(50)} onKeyDown={event => {if (["ArrowLeft","ArrowRight"].includes(event.key)) {event.preventDefault();setEditorWidth(value => Math.max(30,Math.min(70,value+(event.key === "ArrowRight" ? 2 : -2))));}}} className={`hidden w-2 shrink-0 cursor-col-resize touch-none items-center justify-center md:flex ${dragging ? "bg-purple-500/40" : "bg-[#171725] hover:bg-purple-500/30"}`}><GripVertical size={12}/></div>
+        <div role="separator" aria-label="Resize editor and preview" aria-orientation="vertical" aria-valuemin={30} aria-valuemax={70} aria-valuenow={Math.round(editorWidth)} tabIndex={0} title="Drag to resize. Double-click to reset." onPointerDown={event => {event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);setDragging(true);}} onPointerMove={resize} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)} onLostPointerCapture={() => setDragging(false)} onDoubleClick={() => setEditorWidth(45)} onKeyDown={event => {if (["ArrowLeft","ArrowRight"].includes(event.key)) {event.preventDefault();setEditorWidth(value => Math.max(30,Math.min(70,value+(event.key === "ArrowRight" ? 2 : -2))));}}} className={`hidden w-2 shrink-0 cursor-col-resize touch-none items-center justify-center md:flex ${dragging ? "bg-purple-500/40" : "bg-[#171725] hover:bg-purple-500/30"}`}><GripVertical size={12}/></div>
         <div ref={previewRef} className={`${mobileView === "preview" ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col bg-[#11111f] md:flex fullscreen:h-screen fullscreen:w-screen`}>
           <div className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-1"><span className="flex items-center gap-2 text-xs font-semibold"><Eye size={15} className="text-purple-400"/> Live Preview</span><DeviceControls device={device} setDevice={setDevice} target={previewRef}/></div>
           {previewUrl ? <DevicePreview device={device}>{({width,height}) => <iframe key={previewUrl} src={previewUrl} title="Flutter Application Preview" sandbox="allow-scripts" referrerPolicy="no-referrer" style={{width,height,border:0,display:"block",pointerEvents:dragging ? "none" : "auto"}}/>}</DevicePreview> : <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-[#090910] p-5 text-center"><div className="max-w-xs">
