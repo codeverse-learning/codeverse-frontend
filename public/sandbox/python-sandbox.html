@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="
+      default-src 'none';
+      script-src 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;
+      worker-src blob:;
+      connect-src https://cdn.jsdelivr.net;
+      base-uri 'none';
+      form-action 'none';
+    "
+  />
+
+  <title>CODEVERSE Python Sandbox</title>
+</head>
+
+<body>
+  <script>
+    (() => {
+      let worker = null;
+      let workerUrl = null;
+      let started = false;
+
+      const parentWindow = window.parent;
+
+      function send(data) {
+        parentWindow.postMessage(data, "*");
+      }
+
+      function cleanup() {
+        if (worker) {
+          worker.terminate();
+          worker = null;
+        }
+
+        if (workerUrl) {
+          URL.revokeObjectURL(workerUrl);
+          workerUrl = null;
+        }
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== parentWindow) return;
+
+        const message = event.data;
+
+        if (!message || message.type !== "EXECUTE") return;
+        if (started) return;
+
+        started = true;
+
+        try {
+          if (typeof message.workerSource !== "string") {
+            throw new Error("Invalid worker configuration.");
+          }
+
+          const blob = new Blob(
+            [message.workerSource],
+            { type: "application/javascript" }
+          );
+
+          workerUrl = URL.createObjectURL(blob);
+
+          worker = new Worker(workerUrl);
+
+          worker.onmessage = (event) => {
+            const response = event.data;
+
+            send(response);
+
+            if (
+              response.type === "RESULT" ||
+              response.type === "ERROR"
+            ) {
+              cleanup();
+            }
+          };
+
+          worker.onerror = () => {
+            cleanup();
+
+            send({
+              type: "ERROR",
+              errorCode: "WORKER_ERROR",
+              message: "Unable to start the Python runtime."
+            });
+          };
+
+          worker.postMessage({
+            type: "EXECUTE",
+            code: message.code
+          });
+
+        } catch (error) {
+          cleanup();
+
+          send({
+            type: "ERROR",
+            errorCode: "SANDBOX_ERROR",
+            message: error.message
+          });
+        }
+      });
+
+      window.addEventListener("pagehide", cleanup);
+
+      send({ type: "READY" });
+    })();
+  </script>
+</body>
+</html>
