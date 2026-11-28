@@ -1,0 +1,238 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="
+      default-src 'none';
+      script-src 'unsafe-inline';
+      worker-src blob:;
+      connect-src 'none';
+      object-src 'none';
+      base-uri 'none';
+      form-action 'none';
+    "
+  />
+
+  <meta name="referrer" content="no-referrer" />
+
+  <title>CODEVERSE Execution Sandbox</title>
+</head>
+
+<body>
+  <script>
+    (() => {
+      "use strict";
+
+      const parentWindow = window.parent;
+
+      const ALLOWED_LANGUAGES = new Set([
+        "javascript"
+      ]);
+
+      const MAX_CODE_LENGTH = 10000;
+      const MAX_WORKER_LENGTH = 2000000;
+      const MAX_RUNTIME = 30000;
+
+      let worker = null;
+      let workerUrl = null;
+      let timeoutId = null;
+      let started = false;
+      let finished = false;
+
+      function send(data) {
+        parentWindow.postMessage(data, "*");
+      }
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+
+        if (worker) {
+          worker.terminate();
+          worker = null;
+        }
+
+        if (workerUrl) {
+          URL.revokeObjectURL(workerUrl);
+          workerUrl = null;
+        }
+      }
+
+      function fail(message, errorCode) {
+        if (finished) return;
+
+        finished = true;
+
+        cleanup();
+
+        send({
+          type: "ERROR",
+          errorCode,
+          message
+        });
+      }
+
+      function complete(data) {
+        if (finished) return;
+
+        finished = true;
+
+        cleanup();
+
+        send({
+          type: "RESULT",
+          data
+        });
+      }
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== parentWindow) return;
+        if (started || finished) return;
+
+        const message = event.data;
+
+        if (!message || message.type !== "EXECUTE") {
+          return;
+        }
+
+        started = true;
+
+        if (!ALLOWED_LANGUAGES.has(message.language)) {
+          fail(
+            "Unsupported sandbox language.",
+            "UNSUPPORTED_LANGUAGE"
+          );
+          return;
+        }
+
+        if (
+          typeof message.code !== "string" ||
+          !message.code.trim() ||
+          message.code.length > MAX_CODE_LENGTH
+        ) {
+          fail(
+            "Invalid source code.",
+            "INVALID_CODE"
+          );
+          return;
+        }
+
+        if (
+          typeof message.workerSource !== "string" ||
+          !message.workerSource.trim() ||
+          message.workerSource.length > MAX_WORKER_LENGTH
+        ) {
+          fail(
+            "Invalid execution engine.",
+            "INVALID_WORKER"
+          );
+          return;
+        }
+
+        try {
+          const blob = new Blob(
+            [message.workerSource],
+            {
+              type: "application/javascript"
+            }
+          );
+
+          workerUrl = URL.createObjectURL(blob);
+
+          worker = new Worker(workerUrl);
+
+          timeoutId = setTimeout(() => {
+            fail(
+              "Execution time limit exceeded.",
+              "EXECUTION_TIMEOUT"
+            );
+          }, MAX_RUNTIME);
+
+          worker.onmessage = (event) => {
+            if (finished) return;
+
+            const response = event.data;
+
+            if (
+              !response ||
+              typeof response !== "object"
+            ) {
+              return;
+            }
+
+            switch (response.type) {
+              case "STATUS":
+                if (
+                  response.phase === "INITIALIZING" ||
+                  response.phase === "EXECUTING"
+                ) {
+                  send({
+                    type: "STATUS",
+                    phase: response.phase,
+                    message:
+                      typeof response.message === "string"
+                        ? response.message.slice(0, 200)
+                        : ""
+                  });
+                }
+
+                break;
+
+              case "RESULT":
+                complete(response.data);
+                break;
+
+              case "ERROR":
+                fail(
+                  typeof response.message === "string"
+                    ? response.message.slice(0, 2000)
+                    : "Execution failed.",
+                  "RUNTIME_ERROR"
+                );
+                break;
+
+              default:
+                break;
+            }
+          };
+
+          worker.onerror = () => {
+            fail(
+              "Unable to start the execution runtime.",
+              "WORKER_ERROR"
+            );
+          };
+
+          worker.onmessageerror = () => {
+            fail(
+              "Unable to read execution results.",
+              "MESSAGE_ERROR"
+            );
+          };
+
+          worker.postMessage({
+            type: "EXECUTE",
+            language: message.language,
+            code: message.code
+          });
+
+        } catch {
+          fail(
+            "Unable to initialize the execution sandbox.",
+            "SANDBOX_ERROR"
+          );
+        }
+      });
+
+      window.addEventListener("pagehide", cleanup);
+
+      send({
+        type: "READY"
+      });
+    })();
+  </script>
+</body>
+</html>
