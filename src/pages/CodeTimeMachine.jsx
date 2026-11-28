@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { executePython } from "../services/pythonExecution";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Clock3, Code2, Play, Pause,
@@ -98,6 +99,7 @@ export default function CodeTimeMachine() {
   const [requestError, setRequestError] = useState("");
   const [speed, setSpeed] = useState(1);
   const [copied, setCopied] = useState(false);
+  const runId = useRef(0);
 
   const steps = result?.steps ?? [];
   const last = steps.length - 1;
@@ -139,6 +141,7 @@ export default function CodeTimeMachine() {
   }, [playing, stepIndex, last]);
 
   function resetTrace() {
+    runId.current += 1;
     setPlaying(false);
     setResult(null);
     setStepIndex(-1);
@@ -189,7 +192,16 @@ export default function CodeTimeMachine() {
     if (!code.trim() || loading) return;
     resetTrace();
     setLoading(true);
+    const currentRun = runId.current;
     try {
+      if (language === "python") {
+        if (!import.meta.env.DEV) {
+          throw new Error("Python browser execution is currently available for local testing only.");
+        }
+        const data = await executePython(code);
+        if (runId.current === currentRun) setResult(data);
+        return;
+      }
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/code-trace`, {
         method: "POST",
@@ -209,9 +221,9 @@ export default function CodeTimeMachine() {
       if (!data || !Array.isArray(data.steps)) {
         throw new Error("Invalid trace response from backend.");
       }
-      setResult(data);
+      if (runId.current === currentRun) setResult(data);
     } catch (error) {
-      setRequestError(error.message || "Unable to connect to CODEVERSE backend.");
+      if (runId.current === currentRun) setRequestError(error.message || (language === "python" ? "Python execution is unavailable." : "Unable to connect to CODEVERSE backend."));
     } finally {
       setLoading(false);
     }
