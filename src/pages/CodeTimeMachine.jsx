@@ -195,11 +195,12 @@ export default function CodeTimeMachine() {
     const currentRun = runId.current;
     try {
       if (language === "python") {
-        if (!import.meta.env.DEV) {
-          throw new Error("Python browser execution is currently available for local testing only.");
-        }
         const data = await executePython(code);
-        if (runId.current === currentRun) setResult(data);
+
+        if (runId.current === currentRun) {
+          setResult(data);
+        }
+
         return;
       }
       const token = localStorage.getItem("token");
@@ -271,7 +272,7 @@ export default function CodeTimeMachine() {
             </select>
             <ChevronDown size={17} className="pointer-events-none absolute right-3 top-3.5 text-purple-300" />
           </div>
-          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python, JavaScript, Java, C, C++, C#, PHP and Dart available for local testing.</p>
+          <p className="mt-3 flex items-center gap-2 text-xs text-gray-400"><LockKeyhole size={13} /> Python browser execution (Beta). Other languages require a compatible execution server.</p>
         </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
