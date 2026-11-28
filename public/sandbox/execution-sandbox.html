@@ -71,7 +71,7 @@
         send({
           type: "ERROR",
           errorCode,
-          message
+          message: String(message).slice(0, 2000)
         });
       }
 
@@ -87,6 +87,17 @@
           data
         });
       }
+
+      document.addEventListener(
+        "securitypolicyviolation",
+        (event) => {
+          console.warn(
+            "[CODEVERSE Sandbox] CSP violation:",
+            event.violatedDirective,
+            event.blockedURI
+          );
+        }
+      );
 
       window.addEventListener("message", (event) => {
         if (event.source !== parentWindow) return;
@@ -199,9 +210,28 @@
             }
           };
 
-          worker.onerror = () => {
+          worker.onerror = (event) => {
+            const errorMessage =
+              event.message ||
+              "Browser did not provide worker error details.";
+
+            const lineNumber = event.lineno || 0;
+            const columnNumber = event.colno || 0;
+
+            console.error(
+              "[CODEVERSE Worker Error]",
+              {
+                message: errorMessage,
+                line: lineNumber,
+                column: columnNumber
+              }
+            );
+
             fail(
-              "Unable to start the execution runtime.",
+              `JavaScript execution runtime error:\n` +
+              `${errorMessage}\n` +
+              `Worker line: ${lineNumber}\n` +
+              `Worker column: ${columnNumber}`,
               "WORKER_ERROR"
             );
           };
@@ -219,9 +249,16 @@
             code: message.code
           });
 
-        } catch {
+        } catch (error) {
+          console.error(
+            "[CODEVERSE Sandbox Error]",
+            error
+          );
+
           fail(
-            "Unable to initialize the execution sandbox.",
+            `Unable to initialize the execution sandbox:\n` +
+            `${error?.name || "Error"}: ` +
+            `${error?.message || "Unknown error"}`,
             "SANDBOX_ERROR"
           );
         }
